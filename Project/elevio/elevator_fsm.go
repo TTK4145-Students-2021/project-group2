@@ -1,21 +1,20 @@
 package elevio
 
-type ElevatorState int
+import "fmt"
 
-const (
-	AT_FLOOR   ElevatorState = 0
-	GOING_UP                 = 1
-	GOING_DOWN               = 2
-)
+func TakeOrder(button ButtonType, floor int, value bool) {
 
-func takeOrder(button ButtonType, floor int, value bool) {
+	fmt.Printf("%v\n", button)
+	fmt.Printf("%v\n", floor)
 
 	switch button {
-	case button == BT_HallUp:
-		//
-	case button.BT_HallDown:
-		//What to do?
-	case button.BT_Cab:
-		//What to do?
+	case BT_HallUp:
+		fmt.Printf("Button press up")
+
+	case BT_HallDown:
+		fmt.Printf("Button press down")
+
+	case BT_Cab:
+		fmt.Printf("Button press cab")
 	}
 }

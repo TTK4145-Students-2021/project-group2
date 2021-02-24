@@ -32,7 +32,7 @@ func main() {
 			elevio.SetButtonLamp(a.Button, a.Floor, true)
 
 			//TEST:
-			elevio.takeOrder(a.Button, a.Floor, true)
+			elevio.TakeOrder(a.Button, a.Floor, true)
 
 		case a := <-drv_floors:
 			fmt.Printf("%+v\n", a)
