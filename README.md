@@ -1,6 +1,5 @@
 Elevator Project
 ================
-hei
 
 Summary
 -------
