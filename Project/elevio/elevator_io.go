@@ -92,18 +92,6 @@ func PollFloorSensor(receiver chan<- int) {
 	}
 }
 
-func PollStopButton(receiver chan<- bool) {
-	prev := false
-	for {
-		time.Sleep(_pollRate)
-		v := getStop()
-		if v != prev {
-			receiver <- v
-		}
-		prev = v
-	}
-}
-
 func PollObstructionSwitch(receiver chan<- bool) {
 	prev := false
 	for {
@@ -136,15 +124,6 @@ func getFloor() int {
 	} else {
 		return -1
 	}
-}
-
-func getStop() bool {
-	_mtx.Lock()
-	defer _mtx.Unlock()
-	_conn.Write([]byte{8, 0, 0, 0})
-	var buf [4]byte
-	_conn.Read(buf[:])
-	return toBool(buf[1])
 }
 
 func getObstruction() bool {
