@@ -2,8 +2,6 @@ package elevio
 
 import (
 	"fmt"
-
-	"./elevio"
 )
 
 func RunElevator(port string, numFloors int) {

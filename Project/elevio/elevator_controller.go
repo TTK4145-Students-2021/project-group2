@@ -25,10 +25,7 @@ func RunElevator(id int, port int) {
 		case a := <-drv_buttons:
 			fmt.Printf("%+v\n", a)
 
-			//HandleButtonEvent()
-
-			//TEST:
-			//AssignOrder(a.Button, a.Floor, true)
+			HandleButtonEvent(a.Button, a.Floor) //How do we deal with a button being pressed?
 
 		case a := <-drv_floors:
 			fmt.Printf("%+v\n", a)
@@ -52,7 +49,12 @@ func RunElevator(id int, port int) {
 	}
 }
 
-func gotoFloor(elev *Elevator, targetFloor int, drv_floors chan<-, drv_obstr chan<-) int {
+
+func HandleButtonEvent() {
+
+}
+
+func gotoFloor(targetFloor int, drv_floors chan<-, drv_obstr chan<-) int {
 
 	//TODO: Check if targetfloor exists
 	if targetFloor > NumberOfFloors-1 || targetFloor < 0 {

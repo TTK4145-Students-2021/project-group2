@@ -11,15 +11,8 @@ func main() {
 
 	port int = 10000
 
+	numFloors := config.NumFloors //Dette bør tilhøre en heis. Ikke selvfølge at alle heiser har like mange etasjer
 	//communication.SetupServer()
-	//
-
-	//elevio.SetupElevator()
-	//elevio.InitElevatorController()
-
-
-	//elevio.StopElevator(elevatorID, port)
-	numFloors := config.NumFloors
 
 	port := os.Args[1]
 	elevio.RunElevator("localhost:"+port, numFloors)
