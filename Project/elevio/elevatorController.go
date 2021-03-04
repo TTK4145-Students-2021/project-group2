@@ -53,7 +53,10 @@ func handleButtonEvent(buttonEvent ButtonEvent) {
 	fmt.Printf("%v\n", buttonEvent.Button)
 	fmt.Printf("%v\n", buttonEvent.Floor)
 
-	switch buttonEvent.Button {
+	button := buttonEvent.Button
+	floor := buttonEvent.Floor
+
+	switch button {
 	case BT_HallUp:
 		fmt.Printf("Button press up")
 
@@ -62,15 +65,17 @@ func handleButtonEvent(buttonEvent ButtonEvent) {
 
 	case BT_Cab:
 		fmt.Printf("Button press cab")
+		handleCabOrder(floor)
 	}
 }
 
-func gotoFloor(targetFloor int, drv_floors <-chan int, drv_obstr <-chan bool) int {
+func gotoFloor(targetFloor int) int {
 
-	//TODO: Check if targetfloor exists
-	if targetFloor > NumberOfFloors-1 || targetFloor < 0 {
-		return 1 //Some error code that says the floor does not exist.
-	}
+	// Initialize goroutines for channels
+	drv_floors := make(chan int)
+	drv_obstr := make(chan bool)
+	go PollFloorSensor(drv_floors)
+	go PollObstructionSwitch(drv_obstr)
 
 	//Checks for status updates while operating the motor towards the target destination
 	for {
@@ -92,5 +97,33 @@ func gotoFloor(targetFloor int, drv_floors <-chan int, drv_obstr <-chan bool) in
 			SetMotorDirection(MD_Stop)
 			return 1 //SOME ERROR CODE
 		}
+	}
+}
+
+func handleCabOrder(targetFloor int) {
+
+	err := validateCabOrder(targetFloor)
+	if err != 0 { //If err != OK is the intended code. But i need to find information about this
+		//handle and display error code
+		//return something
+	}
+
+	// TODO: Turn on light
+
+	// TODO: gotoFloor
+	// What happens if this does not execute properly? Write in a recovery routine!
+
+	// TODO: Turn of lights
+
+	// TODO: Open doors
+
+}
+
+func validateCabOrder(targetFloor int) int {
+
+	if targetFloor > NumberOfFloors-1 || targetFloor < 0 {
+		return 1 //Some error code that says the floor does not exist.
+	} else {
+		return 0
 	}
 }
