@@ -1,20 +1,23 @@
+// run main with as follows:
+// go run main.go [port] [elevatorID]
+
 package main
 
 import (
-	"os"
+	"fmt"
 
 	"./config"
 	"./elevio"
 )
 
 func main() {
+	config.InitConfig()
 
-	numFloors := config.NumFloors
+	fmt.Println(config.NumFloors, config.NumElevators, config.Port, config.ID)
 
-	port := os.Args[1]
-	elevio.RunElevator("localhost:"+port, numFloors)
+	elevio.RunElevator("localhost:"+config.Port, config.NumFloors)
 
-	newOrder := make(chan elevio.ButtonEvent)
-	assignedOrder := make(chan elevio.ButtonEvent)
+	//newOrder := make(chan elevio.ButtonEvent)
+	//assignedOrder := make(chan elevio.ButtonEvent)
 
 }
