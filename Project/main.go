@@ -1,14 +1,14 @@
 package main
 
 import (
-	"fmt"
+	"os"
 
+	"./config"
 	"./elevio"
 )
 
 func main() {
 
-	elevatorID int = 10
 	port int = 10000
 
 	//communication.SetupServer()
@@ -16,11 +16,14 @@ func main() {
 
 	//elevio.SetupElevator()
 	//elevio.InitElevatorController()
-	elevio.initElevator(elevatorID, port)
-	elevio.RunElevator(elevatorID, port)
-
-
 
 
 	//elevio.StopElevator(elevatorID, port)
+	numFloors := config.NumFloors
+
+	port := os.Args[1]
+	elevio.RunElevator("localhost:"+port, numFloors)
+
+	newOrder := make(chan elevio.ButtonEvent)
+	assignedOrder := make(chan elevio.ButtonEvent)
 }
