@@ -9,6 +9,16 @@ import (
 
 func main() {
 
+	port int = 10000
+
+	//communication.SetupServer()
+	//
+
+	//elevio.SetupElevator()
+	//elevio.InitElevatorController()
+
+
+	//elevio.StopElevator(elevatorID, port)
 	numFloors := config.NumFloors
 
 	port := os.Args[1]
@@ -16,5 +26,4 @@ func main() {
 
 	newOrder := make(chan elevio.ButtonEvent)
 	assignedOrder := make(chan elevio.ButtonEvent)
-
 }
