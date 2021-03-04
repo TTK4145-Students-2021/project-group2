@@ -1,22 +1,23 @@
+// run main with as follows:
+// go run main.go [port] [elevatorID]
+
 package main
 
 import (
-	"os"
+	"fmt"
 
 	"./config"
 	"./elevio"
 )
 
 func main() {
+	config.InitConfig()
 
-	port int = 10000
+	fmt.Println(config.NumFloors, config.NumElevators, config.Port, config.ID)
 
-	numFloors := config.NumFloors //Dette bør tilhøre en heis. Ikke selvfølge at alle heiser har like mange etasjer
-	//communication.SetupServer()
+	elevio.RunElevator("localhost:"+config.Port, config.NumFloors)
 
-	port := os.Args[1]
-	elevio.RunElevator("localhost:"+port, numFloors)
+	//newOrder := make(chan elevio.ButtonEvent)
+	//assignedOrder := make(chan elevio.ButtonEvent)
 
-	newOrder := make(chan elevio.ButtonEvent)
-	assignedOrder := make(chan elevio.ButtonEvent)
 }
