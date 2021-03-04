@@ -48,10 +48,10 @@ func initElevatorStatus(startPos int) elevatorStatus{
 	return elevatorStatus{
 		ID: config.ID,
 		pos: startPos,
-		orderList: initOrderList
-		dir: elevio.MD_Stop
-		available: true
-		doorOpen: false	
+		orderList: initOrderList,
+		dir: elevio.MD_Stop,
+		available: true,
+		doorOpen: false,
 	}
 }
 
