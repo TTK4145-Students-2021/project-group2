@@ -58,12 +58,6 @@ func SetDoorOpenLamp(value bool) {
 	_conn.Write([]byte{4, toByte(value), 0, 0})
 }
 
-func SetStopLamp(value bool) {
-	_mtx.Lock()
-	defer _mtx.Unlock()
-	_conn.Write([]byte{5, toByte(value), 0, 0})
-}
-
 func PollButtons(receiver chan<- ButtonEvent) {
 	prev := make([][3]bool, _numFloors)
 	for {
