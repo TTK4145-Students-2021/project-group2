@@ -26,33 +26,34 @@ func RunElevator(port string, numFloors int) {
 		case a := <-drv_buttons:
 			// Send new order to newOrder channel
 			// if new order at current floor and dir, dont send
+			handleButtonEvent(a)
 
 		case a := <-drv_floors:
 			fmt.Printf("%+v\n", a)
 			if a == numFloors-1 {
-				dir = elevio.MD_Down
+				dir = MD_Down
 			} else if a == 0 {
-				dir = elevio.MD_Up
+				dir = MD_Up
 			}
 			//elevio.SetMotorDirection(dir)
 
 		case a := <-drv_obstr:
 			fmt.Printf("%+v\n", a)
 			if a {
-				elevio.SetMotorDirection(elevio.MD_Stop)
+				SetMotorDirection(MD_Stop)
 			} else {
-				elevio.SetMotorDirection(dir)
+				SetMotorDirection(dir)
 			}
 		}
 	}
 }
 
-func HandleButtonEvent() {
+func handleButtonEvent(buttonEvent ButtonEvent) {
 
-	fmt.Printf("%v\n", button)
-	fmt.Printf("%v\n", floor)
+	fmt.Printf("%v\n", buttonEvent.Button)
+	fmt.Printf("%v\n", buttonEvent.Floor)
 
-	switch button {
+	switch buttonEvent.Button {
 	case BT_HallUp:
 		fmt.Printf("Button press up")
 
@@ -61,10 +62,10 @@ func HandleButtonEvent() {
 
 	case BT_Cab:
 		fmt.Printf("Button press cab")
-	}p
+	}
 }
 
-func gotoFloor(targetFloor int, drv_floors chan<-, drv_obstr chan<-) int {
+func gotoFloor(targetFloor int, drv_floors <-chan int, drv_obstr <-chan bool) int {
 
 	//TODO: Check if targetfloor exists
 	if targetFloor > NumberOfFloors-1 || targetFloor < 0 {
