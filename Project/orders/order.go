@@ -20,6 +20,7 @@ type order struct {
 	hasOrder   bool
 	versionNum int
 	assignedElevator int
+	timeStamp //time variable
 }
 
 type elevatorStatus struct {
@@ -27,8 +28,9 @@ type elevatorStatus struct {
 	pos int
 	orderList[config.NumFloors][2] order
 	dir elevio.MotorDirection
-	available bool
+	isOnline bool
 	doorOpen bool
+	cabOrder [config.NumFloors] bool
 }
 
 
@@ -56,8 +58,11 @@ func initElevatorStatus(startPos int) elevatorStatus{
 }
 
 
-//Returns cost value for every activate order
-func costFunction(elevatorStatus elevatorStatus){
+//Returns cost value for order
+func costFunction(order){
+}
+
+func pickOrder(elevatorStatus elevatorStatus){
 }
 
 //updates your orderList
@@ -71,9 +76,10 @@ func main() {
 		case s := <- "order from yout own buttons"	
 			updateOrderList(s) := <-"order from yout own buttons":
 			
-		case a := <-"updateds from other elevators":
-			updateOrderList(s)
-		
+		case a := channel <-"elevatorStaus": // new update
+			// update own orderlist and otherElev with the incomming elevatorStatus
+			updateStatus(a elevStatus)
+			
 		case b := <-"reached a new floor":
 			updateOrderList(s)
 	
@@ -87,8 +93,8 @@ func main() {
 		}
 	}                                                                                                                                                                                                                
 
-	cost := costFunction()
-	if (you have the lowest score and is available){
-		// Drive toward targetfloor
-	}
+	pickOrder()
+
+
+
 }
