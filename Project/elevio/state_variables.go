@@ -20,7 +20,7 @@ type ElevatorState int
 
 const (
 	UNAVAILABLE ElevatorState = -1 //Is this really needed? We'll see
-	AT_FLOOR                  = 0
+	IDLE                      = 0
 	GOING_UP                  = 1
 	GOING_DOWN                = 2
 )
