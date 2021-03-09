@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+// TODO: Implement a way of changing floor target midway
+// This should probably be done as a channel into movingUp / movingDown
+// You don't even need to push a new event-type. Just do the calculations inside the select loop.
+
 // language spec: https://golang.org/ref/spec#Function_literals
 // Framework: https://venilnoronha.io/a-simple-state-machine-framework-in-go
 
@@ -72,22 +76,17 @@ type ElevatorMachine struct {
 	// Contains all channels the elevator needs from elevio
 	Channels ElevChannels
 
-	// Number of floors
 	TotalFloors int
-
-	// Top floor number ?
-	TopFloor int
-
-	// Bottom floor number ?
+	TopFloor    int
 	BottomFloor int
 
-	// Track if at top floor ?
+	// Track if at top floor
 	AtTop bool
 
-	// Track if at bottom floor ?
+	// Track if at bottom floor
 	AtBottom bool
 
-	// DO WE NEED ONE FOR CURRENT FLOOR? Maybe
+	// DO WE NEED A BOOL TO CHECK AVAILABILITY?
 
 	// Ensures only one event is processed by the machine at a time
 	mutex sync.Mutex
@@ -122,7 +121,8 @@ func (elev *ElevatorMachine) SendEvent(event EventType, eventCtx EventContext) e
 		if err != nil {
 			return ErrEventRejected
 		}
-		// Check if possible to move up or down. Might have to do this elsewhere
+
+		// Return conditional errors regarding next state
 		switch nextState {
 		case MovingUp:
 			if elev.AtTop {
