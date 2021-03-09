@@ -21,4 +21,6 @@ func main() {
 	//newOrder := make(chan elevio.ButtonEvent)
 	//assignedOrder := make(chan elevio.ButtonEvent)
 
+	// TestElevatorMachine() ??
+
 }
