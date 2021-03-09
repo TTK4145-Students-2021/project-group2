@@ -7,7 +7,7 @@ import (
 // This has yet to be implemented in the RunElevator function
 // ElevatorChannels contains the channels from elevio
 
-type Channels struct {
+type ElevChannels struct {
 	drv_buttons <-chan ButtonEvent
 	drv_floors  <-chan int
 	drv_obstr   <-chan bool

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 )
 
 // language spec: https://golang.org/ref/spec#Function_literals
@@ -17,7 +18,7 @@ var ErrNoStateAction = errors.New("there are no actions in the next state")
 
 const (
 	// States of the elevator
-	Unititialized      StateType = "Uninitialized"
+	Uninitialized      StateType = "Uninitialized"
 	Initializing       StateType = "Inititializing"
 	MovingUp           StateType = "MovingUp"
 	MovingDown         StateType = "MovingDown"
@@ -82,7 +83,7 @@ type ElevatorMachine struct {
 	States States
 
 	// Contains all channels the elevator needs from elevio
-	Channels *Channels
+	Channels ElevChannels
 
 	// Number of floors
 	TotalFloors int
@@ -119,7 +120,7 @@ func (elev *ElevatorMachine) getNextState(event EventType) (StateType, error) {
 			}
 		}
 	}
-	return Unititialized, ErrEventRejected
+	return Uninitialized, ErrEventRejected
 }
 
 // SendEvent sends an event to the state machine
@@ -166,7 +167,7 @@ func NewElevatorMachine() *ElevatorMachine {
 		// This maps all the possible states and events appropriately
 		States: States{
 
-			Unititialized: State{
+			Uninitialized: State{
 				Events: Events{
 					Initialize: Initializing,
 				},
@@ -238,6 +239,7 @@ func NewElevatorMachine() *ElevatorMachine {
 				},
 			},
 		},
+		Current: Uninitialized,
 	}
 }
 
@@ -247,18 +249,20 @@ func NewElevatorMachine() *ElevatorMachine {
 // InitContext contains information that needs to passed when initializing elevator
 type InitContext struct {
 	// What do we need for initializing the elevator??
-	Channels *Channels
+	Channels ElevChannels
+	err      error
 }
 
 // MoveContext contains information that needs to passed when moving up or down
 type MoveContext struct {
 	targetFloor int
+	err         error
 }
 
 /*NOTE: I don't quite understand why the context functions are of String()*/
 
 func (ctx *InitContext) String() string {
-	return "Init context called"
+	return fmt.Sprintf("InitContext")
 }
 
 func (ctx *MoveContext) String() string {
@@ -291,7 +295,9 @@ type AtFloorOpenAction struct{}
 func (a *InitAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
 	fmt.Println("Initializing elevator...")
 
+	fmt.Println("Stopping motor")
 	//SetMotorDirection(MD_Stop)
+	fmt.Println("Setting door lamp false")
 	//SetDoorOpenLamp(false)
 
 	// TODO: Set the top floor to be config.NumFloors-1 at some point
@@ -301,10 +307,16 @@ func (a *InitAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Event
 	// Give the elevator all the necessary channels
 	elev.Channels = eventCtx.(*InitContext).Channels
 
-	// TODO: Test that the channels passed actually work!
+	switch GetFloor() {
 
-	switch getFloor() { //getFloor is probably not exported
-	// TODO: case: not at a floor -> move down to a floor
+	// If not at floor -> move down to floor
+	case -1:
+		for GetFloor() == -1 {
+			SetMotorDirection(MD_Down)
+			time.Sleep(time.Millisecond * 20) //SHOULD BE Poll_rate
+		}
+		SetMotorDirection(MD_Stop)
+
 	case elev.BottomFloor:
 		elev.AtBottom = true
 		elev.AtTop = false
@@ -317,7 +329,7 @@ func (a *InitAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Event
 		// TODO: what to do then?
 	}
 
-	switch getObstruction() { //getObstruction is probably not exported
+	switch GetObstruction() { //getObstruction is probably not exported
 	case true:
 		// Set current state to be obstructed here?
 		fmt.Println("Elevator initialized, but obstructed!")
@@ -404,14 +416,6 @@ func (a *AtFloorOpenAction) Execute(elev *ElevatorMachine, eventCtx EventContext
 
 	return NoOp
 }
-
-/*Deprecated
-func (a *MoveAction) Execute(eventCtx EventContext) EventType {
-	fmt.Println("The elevator is moving")
-	// TODO: What does it do when it moves?
-	return NoOp
-}
-*/
 
 // StopAction represents the action executed when entering the stop state
 type StopAction struct{}

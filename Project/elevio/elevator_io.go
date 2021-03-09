@@ -78,7 +78,7 @@ func PollFloorSensor(receiver chan<- int) {
 	prev := -1
 	for {
 		time.Sleep(_pollRate)
-		v := getFloor()
+		v := GetFloor()
 		if v != prev && v != -1 {
 			receiver <- v
 		}
@@ -90,7 +90,7 @@ func PollObstructionSwitch(receiver chan<- bool) {
 	prev := false
 	for {
 		time.Sleep(_pollRate)
-		v := getObstruction()
+		v := GetObstruction()
 		if v != prev {
 			receiver <- v
 		}
@@ -107,7 +107,7 @@ func getButton(button ButtonType, floor int) bool {
 	return toBool(buf[1])
 }
 
-func getFloor() int {
+func GetFloor() int {
 	_mtx.Lock()
 	defer _mtx.Unlock()
 	_conn.Write([]byte{7, 0, 0, 0})
@@ -120,7 +120,7 @@ func getFloor() int {
 	}
 }
 
-func getObstruction() bool {
+func GetObstruction() bool {
 	_mtx.Lock()
 	defer _mtx.Unlock()
 	_conn.Write([]byte{9, 0, 0, 0})
