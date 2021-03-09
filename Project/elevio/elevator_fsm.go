@@ -1,7 +1,6 @@
 package elevio
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -10,16 +9,10 @@ import (
 // language spec: https://golang.org/ref/spec#Function_literals
 // Framework: https://venilnoronha.io/a-simple-state-machine-framework-in-go
 
-// ErrEventRejected returns if the elevator cannot process the event in the state that it's in
-var ErrEventRejected = errors.New("event rejected")
-
-// ErrNoStateAction return if there are errors in the State: Action configurations
-var ErrNoStateAction = errors.New("there are no actions in the next state")
-
 const (
 	// States of the elevator
 	Uninitialized      StateType = "Uninitialized"
-	Initializing       StateType = "Inititializing"
+	Initializing       StateType = "Initializing"
 	MovingUp           StateType = "MovingUp"
 	MovingDown         StateType = "MovingDown"
 	Obstructed         StateType = "Obstructed"
@@ -33,14 +26,16 @@ const (
 
 	// Events that can be processed
 	// NoOp represents a no-op event
-	NoOp       EventType = ""
-	Initialize EventType = "Initialize"
-	OpenDoors  EventType = "OpenDoors"
-	CloseDoors EventType = "CloseDoors"
-	MoveUp     EventType = "MoveUp"
-	MoveDown   EventType = "MoveDown"
-	Stop       EventType = "Stop"
-	Obstruct   EventType = "Obstruct"
+	NoOp           EventType = ""
+	Initialize     EventType = "Initialize"
+	SetInitialized EventType = "SetInitialized"
+	OpenDoors      EventType = "OpenDoors"
+	CloseDoors     EventType = "CloseDoors"
+	MoveUp         EventType = "MoveUp"
+	MoveDown       EventType = "MoveDown"
+	Stop           EventType = "Stop"
+	Obstruct       EventType = "Obstruct"
+	ArriveAtFloor  EventType = "ArriveAtFloor"
 	// CheckPos   EventType = "CheckPos" (?) In an attemt to check if inbetween floors
 )
 
@@ -120,7 +115,7 @@ func (elev *ElevatorMachine) getNextState(event EventType) (StateType, error) {
 			}
 		}
 	}
-	return Uninitialized, ErrEventRejected
+	return elev.Current, ErrEventRejected //This is most likely wrong!!
 }
 
 // SendEvent sends an event to the state machine
@@ -134,6 +129,17 @@ func (elev *ElevatorMachine) SendEvent(event EventType, eventCtx EventContext) e
 		nextState, err := elev.getNextState(event)
 		if err != nil {
 			return ErrEventRejected
+		}
+		// Check if possible to move up or down. Might have to do this elsewhere
+		switch nextState {
+		case MovingUp:
+			if elev.AtTop {
+				return ErrIllegalMoveUp
+			}
+		case MovingDown:
+			if elev.AtBottom {
+				return ErrIllegalMoveDown
+			}
 		}
 
 		// TODO: Create functionality to check if the next state is equal the current
@@ -176,40 +182,39 @@ func NewElevatorMachine() *ElevatorMachine {
 			Initializing: State{
 				Action: &InitAction{},
 				Events: Events{
-					NoOp: Initializing,
+					Obstruct:       Obstructed,
+					SetInitialized: AtFloorDoorsClosed,
 				},
 			},
 
 			Obstructed: State{
 				Action: &OnObstrAction{},
 				Events: Events{
-					// Continue in current state if passed
-					Obstruct: Obstructed,
-					NoOp:     Obstructed,
+					MoveDown: MovingDown,
+					MoveUp:   MovingUp,
+					// TODO: Implement unobstruction routine
 				},
 			},
 
 			MovingUp: State{
 				Action: &MovingUpAction{},
 				Events: Events{
-					Stop:     AtFloorDoorsClosed,
-					Obstruct: Obstructed,
+					Obstruct:      Obstructed,
+					ArriveAtFloor: AtFloorDoorsClosed,
 
 					// Continue in current state if passed
 					MoveUp: MovingUp,
-					NoOp:   MovingUp,
 				},
 			},
 
 			MovingDown: State{
 				Action: &MovingDownAction{},
 				Events: Events{
-					Stop:     AtFloorDoorsClosed,
-					Obstruct: Obstructed,
+					Obstruct:      Obstructed,
+					ArriveAtFloor: AtFloorDoorsClosed,
 
 					// Continue in current state if passed
 					MoveDown: MovingDown,
-					NoOp:     MovingDown,
 				},
 			},
 
@@ -218,11 +223,8 @@ func NewElevatorMachine() *ElevatorMachine {
 				Events: Events{
 					OpenDoors: AtFloorDoorsOpen,
 					Obstruct:  Obstructed,
-
-					// Continue in current state if passed
-					Stop:       AtFloorDoorsClosed,
-					CloseDoors: AtFloorDoorsClosed,
-					NoOp:       AtFloorDoorsClosed,
+					MoveUp:    MovingUp,
+					MoveDown:  MovingDown,
 				},
 			},
 
@@ -231,11 +233,6 @@ func NewElevatorMachine() *ElevatorMachine {
 				Events: Events{
 					CloseDoors: AtFloorDoorsClosed,
 					Obstruct:   Obstructed,
-
-					// Continue in current state if passed
-					Stop:      AtFloorDoorsOpen,
-					OpenDoors: AtFloorDoorsOpen,
-					NoOp:      AtFloorDoorsOpen,
 				},
 			},
 		},
@@ -255,7 +252,7 @@ type InitContext struct {
 
 // MoveContext contains information that needs to passed when moving up or down
 type MoveContext struct {
-	targetFloor int
+	TargetFloor int
 	err         error
 }
 
@@ -267,6 +264,165 @@ func (ctx *InitContext) String() string {
 
 func (ctx *MoveContext) String() string {
 	return "Move context called"
+}
+
+func (a *InitAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
+	fmt.Println("Initializing elevator...")
+
+	fmt.Println("Stopping motor")
+	SetMotorDirection(MD_Stop)
+	fmt.Println("Setting door lamp false")
+	SetDoorOpenLamp(false)
+
+	// TODO: Set the top floor to be config.NumFloors-1 at some point
+	elev.TopFloor = 3
+	elev.BottomFloor = 0
+
+	// Give the elevator all the necessary channels
+	elev.Channels = eventCtx.(*InitContext).Channels
+
+	switch GetFloor() {
+
+	// If not at floor -> move down to floor
+	case -1:
+		for GetFloor() == -1 {
+			SetMotorDirection(MD_Down)
+			time.Sleep(time.Millisecond * 20) //SHOULD BE POLL_RATE!!
+		}
+		SetMotorDirection(MD_Stop)
+		return CloseDoors
+
+	case elev.BottomFloor:
+		elev.AtBottom = true
+		elev.AtTop = false
+	case elev.TopFloor:
+		elev.AtBottom = false
+		elev.AtTop = true
+	default:
+		elev.AtBottom = false
+		elev.AtTop = false
+		// TODO: what to do then?
+	}
+
+	switch GetObstruction() { //getObstruction is probably not exported
+	case true:
+		// Set current state to be obstructed here?
+		fmt.Println("Elevator initialized, but obstructed!")
+		return Obstruct
+	case false:
+		// Do nothing?
+	}
+
+	fmt.Println("Elevator initialized")
+	return SetInitialized
+}
+
+func (a *OnObstrAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
+	fmt.Println("Elevator obstructed action called")
+
+	// TODO: Create the functionality for this event
+
+	return NoOp
+}
+
+func (a *MovingDownAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
+	fmt.Println("Elevator moving down action called")
+
+	// TODO: Implement functionality for this event
+	targetFloor := eventCtx.(*MoveContext).TargetFloor
+	SetMotorDirection(MD_Down)
+
+	for {
+		select {
+		// If new floor detected
+		case a := <-elev.Channels.drv_floors:
+			fmt.Printf("%+v\n", a)
+			SetFloorIndicator(a)
+
+			switch a {
+			case elev.BottomFloor:
+				elev.AtBottom = true
+				SetMotorDirection(MD_Stop)
+				fmt.Println("Arrived at ground floor")
+				return ArriveAtFloor
+			/* Might not need this case
+			case elev.BottomFloor:
+				elev.AtBottom = true
+			*/
+			case targetFloor:
+				SetMotorDirection(MD_Stop)
+				fmt.Printf("Arrived at floor %v", a)
+				return ArriveAtFloor
+			default:
+				elev.AtTop = false
+				elev.AtBottom = false
+			}
+
+		// If obstructed
+		case a := <-elev.Channels.drv_obstr:
+			fmt.Printf("%+v\n", a)
+			return Obstruct
+		}
+	}
+}
+
+func (a *MovingUpAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
+	fmt.Println("Elevator moving up action called")
+
+	targetFloor := eventCtx.(*MoveContext).TargetFloor
+	SetMotorDirection(MD_Up)
+
+	for {
+		select {
+		// If new floor detected
+		case a := <-elev.Channels.drv_floors:
+			fmt.Printf("%+v\n", a)
+			SetFloorIndicator(a)
+
+			switch a {
+			case elev.TopFloor:
+				elev.AtTop = true
+				SetMotorDirection(MD_Stop)
+				fmt.Println("Arrived at top floor")
+				return ArriveAtFloor
+			/* Might not need this case
+			case elev.BottomFloor:
+				elev.AtBottom = true
+			*/
+			case targetFloor:
+				SetMotorDirection(MD_Stop)
+				fmt.Printf("Arrived at floor %v", a)
+				return ArriveAtFloor
+			default:
+				elev.AtTop = false
+				elev.AtBottom = false
+			}
+
+		// If obstructed
+		case a := <-elev.Channels.drv_obstr:
+			fmt.Printf("%+v\n", a)
+			return Obstruct
+		}
+	}
+}
+
+func (a *AtFloorClosedAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
+	SetDoorOpenLamp(false)
+	return NoOp
+}
+
+func (a *AtFloorOpenAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
+	SetDoorOpenLamp(true)
+	return NoOp
+}
+
+// StopAction represents the action executed when entering the stop state
+type StopAction struct{}
+
+func (a *StopAction) Execute(eventCtx EventContext) EventType {
+	fmt.Println("The elevator has stopped")
+	// TODO: What does it do when it stops?
+	return NoOp
 }
 
 /*COMMENT ON ACTION STRUCTS:
@@ -291,137 +447,3 @@ type AtFloorClosedAction struct{}
 
 // AtFloorOpenAction represents the action executed when in this state
 type AtFloorOpenAction struct{}
-
-func (a *InitAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
-	fmt.Println("Initializing elevator...")
-
-	fmt.Println("Stopping motor")
-	//SetMotorDirection(MD_Stop)
-	fmt.Println("Setting door lamp false")
-	//SetDoorOpenLamp(false)
-
-	// TODO: Set the top floor to be config.NumFloors-1 at some point
-	elev.TopFloor = 3
-	elev.BottomFloor = 0
-
-	// Give the elevator all the necessary channels
-	elev.Channels = eventCtx.(*InitContext).Channels
-
-	switch GetFloor() {
-
-	// If not at floor -> move down to floor
-	case -1:
-		for GetFloor() == -1 {
-			SetMotorDirection(MD_Down)
-			time.Sleep(time.Millisecond * 20) //SHOULD BE Poll_rate
-		}
-		SetMotorDirection(MD_Stop)
-
-	case elev.BottomFloor:
-		elev.AtBottom = true
-		elev.AtTop = false
-	case elev.TopFloor:
-		elev.AtBottom = false
-		elev.AtTop = true
-	default:
-		elev.AtBottom = false
-		elev.AtTop = false
-		// TODO: what to do then?
-	}
-
-	switch GetObstruction() { //getObstruction is probably not exported
-	case true:
-		// Set current state to be obstructed here?
-		fmt.Println("Elevator initialized, but obstructed!")
-		return Obstruct
-	case false:
-		// Do nothing?
-	}
-
-	return NoOp
-}
-
-func (a *OnObstrAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
-	fmt.Println("Elevator obstructed action called")
-
-	// TODO: Create the functionality for this event
-
-	return NoOp
-}
-
-func (a *MovingDownAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
-	fmt.Println("Elevator moving down action called")
-
-	// TODO: Implement functionality for this event
-	targetFloor := eventCtx.(*MoveContext).targetFloor
-
-	if elev.AtBottom == true {
-		// TODO: Can't perform action. How do you return this error? Might have to do it earlier!
-	}
-
-	if elev.AtTop == true {
-		// TODO: Same as above
-	}
-
-	for {
-		select {
-		//Upon new floor detected
-		case a := <-elev.Channels.drv_floors:
-			fmt.Printf("%+v\n", a)
-			// SetFloorIndicator(a) (?)
-
-			if a == elev.BottomFloor {
-				SetMotorDirection(MD_Stop)
-				elev.AtBottom = true
-				fmt.Printf("Arrived at floor %v", a)
-				return Stop
-			}
-
-			if a == targetFloor {
-				SetMotorDirection(MD_Stop)
-
-				fmt.Printf("Arrived at floor %v", a)
-				return Stop
-			}
-
-		case a := <-elev.Channels.drv_obstr:
-			fmt.Printf("%+v\n", a)
-			return Obstruct
-		}
-	}
-
-	return NoOp
-}
-
-func (a *MovingUpAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
-	fmt.Println("Elevator moving up action called")
-
-	// TODO: Implement functionality for this event
-
-	return NoOp
-}
-
-func (a *AtFloorClosedAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
-	fmt.Println("Elevator at floor doors closed action called")
-
-	// TODO: Implement functionality for this event
-
-	return NoOp
-}
-
-func (a *AtFloorOpenAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
-	fmt.Println("Elevator at floor doors open action called")
-
-	// TODO: Implement functionality for this event
-
-	return NoOp
-}
-
-// StopAction represents the action executed when entering the stop state
-type StopAction struct{}
-
-func (a *StopAction) Execute(eventCtx EventContext) EventType {
-	fmt.Println("The elevator has stopped")
-	// TODO: What does it do when it stops?
-	return NoOp
-}

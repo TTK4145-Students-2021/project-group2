@@ -1,7 +1,6 @@
 package elevio
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 )
@@ -18,10 +17,6 @@ func TestElevator(t *testing.T) {
 	drv_buttons := make(chan ButtonEvent)
 	drv_floors := make(chan int)
 	drv_obstr := make(chan bool)
-
-	fmt.Println(&drv_buttons)
-	fmt.Println(&drv_floors)
-	fmt.Println(&drv_obstr)
 
 	go PollButtons(drv_buttons)
 	go PollFloorSensor(drv_floors)
@@ -48,16 +43,39 @@ func TestElevator(t *testing.T) {
 		t.Errorf("Couldn't initialize elevator, err: %v", err)
 	}
 
+	moveUpCtx := &MoveContext{
+		TargetFloor: 3,
+	}
+
+	// Move elevator up
+	err = elevator.SendEvent(MoveUp, moveUpCtx)
+	if err != nil {
+		t.Errorf("Couldn't move elevator, err: %v", err)
+	}
+
+	moveDownCtx := &MoveContext{
+		TargetFloor: 0,
+	}
+
+	err = elevator.SendEvent(MoveDown, moveDownCtx)
+	if err != nil {
+		t.Errorf("Couldn't move elevator, err: %v", err)
+	}
+
+	err = elevator.SendEvent(OpenDoors, nil)
+	if err != nil {
+		t.Errorf("Couldn't open doors, err: %v", err)
+	}
+
 	/*
-		// Move elevator up
-		err := elevator.SendEvent(MoveUp, nil)
+		err = elevator.SendEvent(CloseDoors, nil)
 		if err != nil {
-			t.Errorf("Couldn't move elevator, err: %v", err)
+			t.Errorf("Couldn't close doors, err: %v", err)
 		}
+	*/
 
-		time.Sleep(2)
-
-		err := elevator.SendEvent(Stop, nil)
+	/*
+		err = elevator.SendEvent(Stop, nil)
 		if err != nil {
 			t.Errorf("Couldn't stop elevator, err: %v", err)
 		}
