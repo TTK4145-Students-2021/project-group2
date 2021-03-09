@@ -16,6 +16,7 @@ func main() {
 	fmt.Println(config.NumFloors, config.NumElevators, config.Port, config.ID)
 
 	elevio.RunElevator("localhost:"+config.Port, config.NumFloors)
+	orders.runOrders() // Send correct channel
 
 	//newOrder := make(chan elevio.ButtonEvent)
 	//assignedOrder := make(chan elevio.ButtonEvent)
