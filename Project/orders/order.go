@@ -16,7 +16,7 @@ type order struct {
 	floor int
 	direction int	//up = 0, down = 1
 	versionNum int
-	costs[config.NumElevators] int
+	costs map[int]int
 	timeStamp time
 }
 
@@ -98,7 +98,7 @@ func pickOrder(elevatorStatus ElevatorStatus) {
 
 
 
-	
+
 	assignedFloor = 0     //Defalut assigned floor
 	// Itterate through up orders and calcuate all the costs
 
