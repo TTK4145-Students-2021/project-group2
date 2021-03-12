@@ -21,7 +21,7 @@ const (
 	MovingDown         StateType = "MovingDown"
 	AtFloorDoorsClosed StateType = "AtFloorDoorsClosed"
 	AtFloorDoorsOpen   StateType = "AtFloorDoorsOpen"
-	IdleBetweenFloors  StateType = "IdleBetweenFloors"
+	IdleBetweenFloors  StateType = "IdleBetweenFloors" //Not actually used!! Might be used in case of recovery
 
 	// Events that can be processed
 	// NoOp represents a no-op event
@@ -383,6 +383,9 @@ func waitIfObstructed(elev *ElevatorMachine) {
 }
 
 /*COMMENT ON ACTION STRUCTS:
+These action structs are pretty much only used to differentiate between different
+execution-functions.
+
 All of these might not be necessary. It's possible we don't actually have to perform
 an action when in certain states. However it is likely the action will only be to
 continuously monitor the elevators physical state and act upon changes to it.*/
