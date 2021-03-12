@@ -12,9 +12,10 @@ import (
 // bcast elevID, targetFloor, dir
 
 type order struct {
-	hasOrder   bool
+	hasOrder bool
+	floor int
+	direction int	//up = 0, down = 1
 	versionNum int
-	assignedElevator int
 	costs[config.NumElevators] int
 	timeStamp time
 }
@@ -22,22 +23,25 @@ type order struct {
 type ElevatorStatus struct {
 	ID  int
 	pos int
-	orderList[config.NumFloors][2] order  // column 0: UP, column 1: DOWN
+	orderList[config.NumFloors*2-2] order  // 
 	dir elevio.MotorDirection
 	isOnline bool
 	doorOpen bool
 	cabOrder[config.NumFloors] bool
+	isAvailable bool
 }
 
 func returnOrder() {
 	// Dummy function to test elevatorController
-
 }
 
 
 func initElevatorStatus(startPos int) ElevatorStatus {
-	initOrder = order{false, 0}
-	initOrderList = orderList[config.NumFloors][2]
+	var emptyIntList[config.NumFloors] int
+	var emptyBoolList[config.NumFloors] bool
+	
+	initOrder := order{false, 0, emptyList, time.now()}
+	initOrderList := orderList[config.NumFloors][2]
 
 	for i, _ := range initOrderList {
 		for j, _ := range initOrderList[i] {
@@ -50,8 +54,10 @@ func initElevatorStatus(startPos int) ElevatorStatus {
 		pos: <-NewFloor,
 		orderList: initOrderList,
 		dir: elevio.MD_Stop,
-		available: true,
+		isOnline: true,
 		doorOpen: false,
+		cabOrder: emptyBoolList
+		isAvailable: true
 	}
 }
 
@@ -88,23 +94,29 @@ func costFunction(floor,direction){
 }
 
 func pickOrder(elevatorStatus ElevatorStatus) {
-	orderList[]
-	floor = 0
-	for order := range myElevatorStatus.orderList[0]:
-		floor += 1
+
+
+
+
+	
+	assignedFloor = 0     //Defalut assigned floor
+	// Itterate through up orders and calcuate all the costs
+
+	for order := range allElevators[config.ID].orderList:    
 		if (order.hasOrder):
-			costFunction(floor,"up")
-		else break
-	//run costfunction on all orders in orderlist
-	//itterate through the list and check if you have the lowest score
-	//if you have the lowest increase your score for every other
+			order.costs = costFunction(order)  //*****Should you take a copy here????
+		else 
+			var zeros[]              //TODO: Needs to be finished. Idea is just to inseart a slice of zeros. 
+			order.costs = [config.NumElevators]
+	
+	//TODO:itterate through down orders and calcuate all the costs		
 }
 
 
 func runOrders(buttonPressChan chan) {
 
 	myElevatorStatus := initElevatorStatus(floor)
-	otherElevators = map[int]ElevatorStatus{}
+	allElevators = map[int]ElevatorStatus{}
 
 	for {
 		select{
@@ -113,7 +125,7 @@ func runOrders(buttonPressChan chan) {
 		
 		case elevatorStatus := <- ReceivedElevatorUpdate: // new update
 			// update own orderlist and otherElev with the incomming elevatorStatus
-			updateOtherElev(elevatorStatus, &otherElevators)
+			updateOtherElev(elevatorStatus, &allElevators)
 			updateOrderListOther()
 
 		case floor := <- NewFloor:

@@ -2,10 +2,8 @@ import (
 	"testing"
 )
 
-func TestOrders(t *testing) {
-
-	otherElevators = map[int]ElevatorStatus{}
+func TestOrders(t *testing.T) {
 
 	dummyStatus = initElevatorStatus()
-
+	fmt.Println(dummyStatus)
 }

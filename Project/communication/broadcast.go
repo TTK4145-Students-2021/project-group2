@@ -4,6 +4,7 @@ import (
 	"./config"
 )
 
-func initCommunication() string {
-	return config.Port
+func initCommunication(port string) {
+	
+	
 }
