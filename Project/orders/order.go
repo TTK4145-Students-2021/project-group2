@@ -4,8 +4,8 @@ import (
 	"os"
 	"time"
 
-	"./config"
-	"./elevio"
+	"../config"
+	"../elevio"
 )
 
 // assumes buttonEvent as input
