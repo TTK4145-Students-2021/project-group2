@@ -4,7 +4,6 @@ import (
 	//"os"
 	"time"
 	"fmt"
-
 	"../config"
 	"../elevio"
 )
@@ -110,6 +109,34 @@ func updateOrderListButton(btnEvent elevio.ButtonEvent, status *ElevatorStatus) 
 func updateOtherElev(incomingStatus ElevatorStatus, list *[config.NumElevators]ElevatorStatus)  {
 	list[incomingStatus.ID-1] = incomingStatus    //accountign for zero indexing
 }
+func updateElevatorStatusDoor(value bool,list *[config.NumElevators]ElevatorStatus){
+	list[config.ID-1].doorOpen = value
+}
+func updateElevatorStatusFloor(pos int,list *[config.NumElevators]ElevatorStatus){
+	list[config.ID-1].pos = pos
+}
+
+func costFunction(curOrder order, list *[config.NumElevators]ElevatorStatus){
+	for i := 0; i < config.NumElevators; i++{//i is already 0 indexed
+		cost := 0
+		if !list[i].isAvailable || !list[i].isOnline{
+			cost += 1000
+		}
+
+		for j  // for loop checking if the elevator has a cabOrder
+		
+		
+		floorsAway:= curOrder.floor - list[i].pos
+		if floorsAway < 0 {                         // takeing abs of floorsAway
+			floorsAway = - floorsAway
+		} 
+		cost += floorsAway                                   
+		
+
+	}
+
+}
+
 /*
 
 func updateOrderListOther(incomingStatus ElevatorStatus, list *[config.NumElevators]ElevatorStatus) {
@@ -117,17 +144,9 @@ func updateOrderListOther(incomingStatus ElevatorStatus, list *[config.NumElevat
 	Chech if their is a newer version number on all orders. Updated if there is. 
 }
 
-func updateElevatorStatusDoor(isOpen){
-
-}
-func updateElevatorStatusFloor(floor){
-	
-}
 
 //set the costs for an order in the Orderlist
-func costFunction(floor,direction, list *[config.NumElevators]ElevatorStatus){
-	
-}
+
 
 func pickOrder(list [config.NumElevators]ElevatorStatus) {
 	update costs for all the orders
@@ -151,8 +170,9 @@ func pickOrder(list [config.NumElevators]ElevatorStatus) {
 }
 
 
-func runOrders("channel for sending buttonEvemts from elevator", "channel for seding changes in Door from elevator"
-"channel for sending changes in current floor from Elevator", "channel for sending changes in current floor from Elevator" ) {
+func runOrders("channel for reciving buttonEvemts from elevator", "channel for reciving changes in Door from elevator"
+"channel for reciving changes in current floor from Elevator", "channel for sending "go to floor" (int) too Elevator", 
+"channel for reciving incoming Elevatorstatuses","channel for sending out outgoing Elevatorstatuses" ) {
 
 	
 	allElevators := initAllElevatorStatuses()
