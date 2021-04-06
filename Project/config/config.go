@@ -19,6 +19,10 @@ const NumElevators int = 3
 var NewFloor = make(chan int)
 var isDoorOpen = make(chan bool)
 
+var BcastPort int = 12345
+var PeersPort int = 54321
+
+
 func InitConfig() {
 	Port = os.Args[1]
 	ID, _ = strconv.Atoi(os.Args[2])
