@@ -117,6 +117,13 @@ func updateOrderListOther(incomingStatus ElevatorStatus, list *[config.NumElevat
 	Chech if their is a newer version number on all orders. Updated if there is. 
 }
 
+func updateElevatorStatusDoor(isOpen){
+
+}
+func updateElevatorStatusFloor(floor){
+	
+}
+
 //set the costs for an order in the Orderlist
 func costFunction(floor,direction, list *[config.NumElevators]ElevatorStatus){
 	
@@ -144,11 +151,13 @@ func pickOrder(list [config.NumElevators]ElevatorStatus) {
 }
 
 
-func runOrders(buttonPressChan chan<- ButtonEvent) { //***** just an example chan
+func runOrders("channel for sending buttonEvemts from elevator", "channel for seding changes in Door from elevator"
+"channel for sending changes in current floor from Elevator", "channel for sending changes in current floor from Elevator" ) {
 
-	myElevatorStatus := initElevatorStatus(floor)
-	allElevators := [config.NumElevators]ElevatorStatus{}
-	allElevators[config.ID] = myElevatorStatus
+	
+	allElevators := initAllElevatorStatuses()
+	myElevatorStatus := initMyElevatorStatus()
+	allElevators[config.ID-1] = myElevatorStatus
 
 	for {
 		select{
@@ -175,6 +184,9 @@ func runOrders(buttonPressChan chan<- ButtonEvent) { //***** just an example cha
 */
 
 
+
+
+// Functions for printing out the Elevator staus and OrderList
 func printOrderList(list [config.NumFloors*2-2]order){
 	fmt.Println("This is the elevators orderlist")
 	for i := 0; i < len(list); i++ {
