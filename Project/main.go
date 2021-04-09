@@ -11,6 +11,11 @@ import (
 )
 
 func main() {
+	//var HallOrder = make(chan elevio.ButtonEvent)
+	//var ReceivedElevatorUpdate = make(chan orders.ElevatorStatus)
+	//var NewFloor = make(chan int)
+	//var IsDoorOpen = make(chan bool)
+
 	config.InitConfig()
 
 	fmt.Println(config.NumFloors, config.NumElevators, config.Port, config.ID)
