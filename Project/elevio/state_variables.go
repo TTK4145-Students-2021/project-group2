@@ -24,3 +24,5 @@ const (
 	GOING_UP                  = 1
 	GOING_DOWN                = 2
 )
+
+const NoFloor int = -1
