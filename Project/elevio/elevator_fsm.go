@@ -231,29 +231,30 @@ func (a *InitAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Event
 	// Give the elevator all the necessary channels
 	elev.Channels = eventCtx.(*InitContext).Channels
 
+	fmt.Println("Getting floor")
 	switch GetFloor() {
 
-	// If not at floor -> move down to floor
-	case NoFloor:
-		for GetFloor() == NoFloor {
-			SetMotorDirection(MD_Down)
-			time.Sleep(time.Millisecond * 20) //SHOULD BE POLL_RATE!!
-		}
-		SetMotorDirection(MD_Stop)
-		elev.CurrentFloor = GetFloor()
-		return CloseDoors
-		// TODO: Change return CloseDoors to return StopAtFloor!
+		// If not at floor -> move down to floor
+		case NoFloor:
+			for GetFloor() == NoFloor {
+				SetMotorDirection(MD_Down)
+				time.Sleep(time.Millisecond * 20) //SHOULD BE POLL_RATE!!
+			}
+			SetMotorDirection(MD_Stop)
+			elev.CurrentFloor = GetFloor()
+			return CloseDoors
+			// TODO: Change return CloseDoors to return StopAtFloor!
 
-	case elev.BottomFloor:
-		elev.AtBottom = true
-		elev.AtTop = false
-	case elev.TopFloor:
-		elev.AtBottom = false
-		elev.AtTop = true
-	default:
-		elev.AtBottom = false
-		elev.AtTop = false
-		// TODO: what to do then?
+		case elev.BottomFloor:
+			elev.AtBottom = true
+			elev.AtTop = false
+		case elev.TopFloor:
+			elev.AtBottom = false
+			elev.AtTop = true
+		default:
+			elev.AtBottom = false
+			elev.AtTop = false
+			// TODO: what to do then?
 	}
 
 	if GetObstruction() {

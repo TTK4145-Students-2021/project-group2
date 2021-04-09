@@ -197,3 +197,4 @@ func (f WindowsBroadcastConn) SetWriteDeadline(t time.Time) error {
 func DialBroadcastUDP(port int) net.PacketConn {
 	return WindowsBroadcastConn{C.cBcastSocket(C.u_short(port))}
 }
+
