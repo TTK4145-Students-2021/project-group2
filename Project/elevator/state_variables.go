@@ -1,4 +1,4 @@
-package elevio
+package elevator
 
 type MotorDirection int
 

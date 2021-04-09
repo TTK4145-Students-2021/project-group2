@@ -1,4 +1,4 @@
-package elevio
+package elevator
 
 import (
 	"fmt"
@@ -23,6 +23,7 @@ type ControllerChannels struct {
 	Redirect_button_action chan<- messages.ButtonEvent_message
 	Receive_order          <-chan int //Some defined ExecOrder message type to be implemented!!
 	Respond_order          chan<- error
+	ControllerReady        chan<- bool
 	// TODO: How do we tell the controller to turn off lights and such??
 }
 
@@ -36,7 +37,6 @@ type Controller struct {
 
 func NewController(ctrChans ControllerChannels) *Controller {
 	InitElevatorDriver("localhost:"+config.SimPort, config.NumFloors)
-	// TODO: Change name of 'Init'. Bad name
 	elev := NewElevatorMachine()
 	return &Controller{
 		Channels: ctrChans,
@@ -72,6 +72,8 @@ func (ctr *Controller) Run() error {
 	// Send information to recipients whether elevator is available
 	go ctr.PollElevAvailability()
 
+	ctr.Channels.ControllerReady <- true
+
 	fmt.Println("Controller waiting for action...")
 	for {
 		select {
@@ -105,6 +107,7 @@ func (ctr *Controller) Run() error {
 
 		case a := <-channels.Receive_order:
 			fmt.Printf("New order received\n")
+			fmt.Printf("Value %v", a)
 
 			/*NOTE: When we want to tell our order module that the elevator is unavailable,
 			there are different possible approaches. We can
@@ -115,10 +118,10 @@ func (ctr *Controller) Run() error {
 			*/
 
 			// MIGHT NOT BE NECESSARY IF THE ORDER MODULE IS CONTINUOUSLY UPDATED
-			if !elev.Available {
-				channels.Respond_order <- ErrElevUnavailable // Tell the order system error is unavailable
-				break
-			}
+		//	if !elev.Available {
+		//		channels.Respond_order <- ErrElevUnavailable // Tell the order system error is unavailable
+		//		break
+		//	}
 
 			go elev.GotoFloor(a)
 			/*
@@ -191,6 +194,7 @@ func (elev *ElevatorMachine) GotoFloor(targetFloor int) error {
 		TargetFloor: targetFloor,
 	}
 
+	fmt.Println("Sending order event to elevator\n")
 	err := elev.SendEvent(Move, moveCtx)
 	if err != nil {
 		// Return any other errors

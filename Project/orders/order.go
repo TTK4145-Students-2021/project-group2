@@ -286,7 +286,7 @@ func RunOrders(button_press <- chan messages.ButtonEvent_message,  //Elevator co
 		}
 		
 		goTo := pickOrder(&allElevators)
-		fmt.Println("Sending out ordeer:", goTo) 
+		fmt.Println("Sending out order:", goTo) 
 		go sendingElevatorToFloor(go_to_floor, goTo)
 		printElevatorStatus(allElevators[config.ID-1]) 
 	}                                                                                                                                                                                                              

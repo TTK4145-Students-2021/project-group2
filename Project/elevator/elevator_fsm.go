@@ -1,4 +1,4 @@
-package elevio
+package elevator
 
 import (
 	"fmt"
@@ -6,10 +6,14 @@ import (
 	"time"
 )
 
-// TODO: Implement a way of changing floor target midway?
-
 // language spec: https://golang.org/ref/spec#Function_literals
 // Framework used: https://venilnoronha.io/a-simple-state-machine-framework-in-go
+
+// StateType is an extensible state type in the elevator
+type StateType string
+
+// EventType is an extensible event type in the elevator
+type EventType string
 
 const (
 	// States of the elevator
@@ -18,10 +22,8 @@ const (
 	Moving             StateType = "Moving"
 	AtFloorDoorsClosed StateType = "AtFloorDoorsClosed"
 	AtFloorDoorsOpen   StateType = "AtFloorDoorsOpen"
-	// IdleBetweenFloors  StateType = "IdleBetweenFloors" //Not actually used!! Might be used in case of recovery
 
 	// Events that can be processed
-	// NoOp represents a no-op event
 	NoOp           EventType = ""
 	Initialize     EventType = "Initialize"
 	SetInitialized EventType = "SetInitialized"
@@ -29,7 +31,9 @@ const (
 	CloseDoors     EventType = "CloseDoors"
 	Move           EventType = "Move"
 	ArriveAtFloor  EventType = "ArriveAtFloor"
+	StopAtFloor    EventType = "StopAtFloor"
 )
+
 
 // ElevChannels contain all the channels needed for the elevator to work
 type ElevChannels struct {
@@ -37,23 +41,12 @@ type ElevChannels struct {
 	drv_obstr  <-chan bool
 }
 
-// StateType is an extensible state type in the elevator
-type StateType string
-
-// EventType is an extensible event type in the elevator
-type EventType string
-
-// EventContext represents the context to be passed to the action implementation
-type EventContext interface{}
-
-// Action represents the action to be executed in a given state
-type Action interface {
-	// Pass an eventContext and receive an event type
-	Execute(elev *ElevatorMachine, eventCtx EventContext) EventType
-}
 
 // Events represents the mapping of events that can be performed in given states
 type Events map[EventType]StateType
+
+// States represents a mapping of states and their implementations
+type States map[StateType]State
 
 // State binds a state with an action and a set of events it can handle in that given state
 type State struct {
@@ -61,8 +54,7 @@ type State struct {
 	Events Events
 }
 
-// States represents a mapping of states and their implementations
-type States map[StateType]State
+
 
 // ElevatorMachine represents the elevator itself
 type ElevatorMachine struct {
@@ -79,13 +71,13 @@ type ElevatorMachine struct {
 	// Holds the configuration of states and events handled by the state machine
 	States States
 
-	// Contains all channels the elevator needs from elevio
+	// Contains all channels the elevator needs
 	Channels ElevChannels
 
 	// Track current floor
 	CurrentFloor int
 
-	// Other floor data
+	// Other relevant floor data
 	TotalFloors int
 	TopFloor    int
 	BottomFloor int
@@ -96,7 +88,9 @@ type ElevatorMachine struct {
 	mutex sync.Mutex
 }
 
-// NewElevatorMachine initializes and returns an elevator object to be used
+
+
+// NewElevatorMachine initializes and returns a new elevator object
 func NewElevatorMachine() *ElevatorMachine {
 	return &ElevatorMachine{
 
@@ -138,13 +132,13 @@ func NewElevatorMachine() *ElevatorMachine {
 				},
 			},
 		},
+
 		Current:   Uninitialized,
 		Available: false,
 	}
 }
 
-/*The first function argument states that we want the function to act on an elevator object
-The second is our method, and the third is our return types*/
+
 
 // Return next state for given event, or an error if the event can't be handled in this state
 func (elev *ElevatorMachine) getNextState(event EventType) (StateType, error) {
@@ -157,7 +151,7 @@ func (elev *ElevatorMachine) getNextState(event EventType) (StateType, error) {
 			}
 		}
 	}
-	return elev.Current, ErrEventRejected //This is most likely wrong!!
+	return elev.Current, ErrEventRejected //This is most likely wrong!! //TODO: CHECK THIS!
 }
 
 // SendEvent sends an event to the state machine
@@ -203,6 +197,8 @@ func (elev *ElevatorMachine) SendEvent(event EventType, eventCtx EventContext) e
 	}
 }
 
+
+
 // InitContext contains information that needs to passed when initializing elevator
 type InitContext struct {
 	// What do we need for initializing the elevator??
@@ -216,6 +212,7 @@ type MoveContext struct {
 	err         error
 }
 
+// Execute the initializing action for the elevator
 func (a *InitAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
 	fmt.Println("Initializing elevator...")
 
@@ -242,8 +239,8 @@ func (a *InitAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Event
 			}
 			SetMotorDirection(MD_Stop)
 			elev.CurrentFloor = GetFloor()
-			return CloseDoors
-			// TODO: Change return CloseDoors to return StopAtFloor!
+			// TODO: REPAIR THIS LOGIC
+			// It skips the part where it set which floor we're at
 
 		case elev.BottomFloor:
 			elev.AtBottom = true
@@ -265,10 +262,15 @@ func (a *InitAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Event
 	return SetInitialized
 }
 
+// Execute a move order received by the elevator machine
 func (a *MovingAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
+	fmt.Println("Elevator executing order.")
 
 	targetFloor := eventCtx.(*MoveContext).TargetFloor
 	elev.CurrentFloor = GetFloor()
+
+	fmt.Printf("Target Floor: %v | ", targetFloor)
+	fmt.Printf("Current Floor: %v,", elev.CurrentFloor)
 
 	// Decide direction
 	var dir MotorDirection
@@ -337,14 +339,16 @@ func (a *MovingAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Eve
 	}
 }
 
-// Executed when AtFloorDoorClosed state is set
+// Execute when AtFloorDoorClosed state is set
 func (a *AtFloorClosedAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
 	elev.Available = false
 	SetDoorOpenLamp(false)
 	return NoOp
+
+	// TODO: What if you want to open the door or do something else here???
 }
 
-// Executed when AtFloorDoorOpen state is set
+// Execute when AtFloorDoorOpen state is set
 func (a *AtFloorOpenAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
 	elev.Available = true
 	fmt.Println("Elevator set available")
@@ -368,6 +372,16 @@ func waitIfObstructed(elev *ElevatorMachine) {
 			}
 		}
 	}
+}
+
+
+// EventContext represents the context to be passed to the action implementation
+type EventContext interface{}
+
+// Action represents the action to be executed in a given state
+type Action interface {
+	// Pass an eventContext and receive an event type
+	Execute(elev *ElevatorMachine, eventCtx EventContext) EventType
 }
 
 /*COMMENT ON ACTION STRUCTS:
