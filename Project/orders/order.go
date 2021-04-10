@@ -31,10 +31,6 @@ type ElevatorStatus struct {
 	IsAvailable bool
 }
 
-func returnOrder() {
-	// Dummy function to test elevatorController
-}
-
 func initAllElevatorStatuses() [config.NumElevators]ElevatorStatus {
 
 	OrderList := [config.NumFloors*2-2]order{} 
@@ -78,32 +74,9 @@ func initAllElevatorStatuses() [config.NumElevators]ElevatorStatus {
 		}
 		listOfElevators[i-1] = Status
 	}
-	
 	return listOfElevators
 }
 
-
-
-//updates your orderList
-/*
-func updateOrderListButton(btnEvent elevio.ButtonEvent, status *ElevatorStatus) {
-	//if 	
-	if btnEvent.Button == elevio.BT_Cab {
-		status.cabOrder[btnEvent.Floor-1] = true
-	} else {
-		placeInList := 0
-		if btnEvent.Button == elevio.BT_HallUp{
-			placeInList = btnEvent.Floor - 1
-		} else {
-			placeInList = config.NumElevators + btnEvent.Floor - 2
-		}	
-		if status.orderList[placeInList].hasOrder == false {
-			fmt.Println("im here")
-			status.orderList[placeInList].hasOrder = true
-		}
-	}
-}
-*/
 func updateOrderListButton(btnEvent messages.ButtonEvent_message, status *ElevatorStatus) {
 	//if 	
 	if btnEvent.Button == messages.BT_Cab {
@@ -250,6 +223,7 @@ func updateOrderListCompleted(list *[config.NumElevators]ElevatorStatus){
 	// checkis if the elevator has a cab call for the current floor
 	if list[config.ID-1].CabOrder[curFloor-1] == true{
 		list[config.ID-1].CabOrder[curFloor-1] = false
+
 	}
 
 	//Note: this foorloop is here beacuse you have to check both up and down for the same floor, which are stored in diffrent paces in the list
@@ -259,6 +233,7 @@ func updateOrderListCompleted(list *[config.NumElevators]ElevatorStatus){
 		//checks if ther is a hall call at the current floor
 		if list[config.ID-1].OrderList[i].HasOrder && list[config.ID-1].OrderList[i].Floor == curFloor{
 			list[config.ID-1].OrderList[i].HasOrder = false
+			list[config.ID-1].OrderList[i].VersionNum += 1
 		}
 	}
 }
@@ -339,4 +314,7 @@ func printElevatorStatus(status ElevatorStatus){
 	printOrderList(status.OrderList)
 }
 
-// |Direction: ", status.Dir,
+func returnOrder() {
+	// Dummy function to test elevatorController
+}
+
