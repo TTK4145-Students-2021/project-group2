@@ -63,14 +63,13 @@ func (ctr *Controller) Run() error {
 	if err != nil {
 		return err
 	}
-
 	// Start elevio routines
 	go PollButtons(drv_buttons)
 	go PollFloorSensor(drv_floors)
 	go PollObstructionSwitch(drv_obstr)
 
 	// Send information to recipients whether elevator is available
-	go ctr.PollElevAvailability()
+	go ctr.PollElevAvailability(elev)
 
 	ctr.Channels.ControllerReady <- true
 
@@ -107,7 +106,7 @@ func (ctr *Controller) Run() error {
 
 		case a := <-channels.Receive_order:
 			fmt.Printf("New order received\n")
-			fmt.Printf("Value %v", a)
+			fmt.Printf("Value %v\n", a)
 
 			/*NOTE: When we want to tell our order module that the elevator is unavailable,
 			there are different possible approaches. We can
@@ -123,7 +122,7 @@ func (ctr *Controller) Run() error {
 		//		break
 		//	}
 
-			go elev.GotoFloor(a)
+			go elev.|Floor(a)
 			/*
 			//err := elev.GotoFloor(targetFloor)
 			err := elev.GotoFloor(a)
@@ -152,8 +151,8 @@ func (ctr *Controller) GetElevator() *ElevatorMachine {
 	return ctr.Elev
 }
 
-func (ctr *Controller) PollElevAvailability() {
-	prev := false
+func (ctr *Controller) PollElevAvailability(elev *ElevatorMachine) {
+	prev := elev.Available
 	ctr.Channels.Elev_available <- prev
 	for {
 		time.Sleep(_ctrPollRate)
@@ -167,6 +166,8 @@ func (ctr *Controller) PollElevAvailability() {
 		prev = v
 	}
 }
+
+
 
 /*________________________Wrapper functions___________________________*/
 /*These are used to simplify the elevator interface from the controllers perspective*/
@@ -186,7 +187,9 @@ func (elev *ElevatorMachine) Initialize(elevChans ElevChannels) error {
 // GotoFloor tells an elevator to mote to targetFloor
 func (elev *ElevatorMachine) GotoFloor(targetFloor int) error {
 
+	fmt.Println("GotoFloor called")
 	if elev.Available == false {
+		fmt.Println("GotoFloor failed")
 		return ErrElevUnavailable
 	}
 
@@ -197,6 +200,7 @@ func (elev *ElevatorMachine) GotoFloor(targetFloor int) error {
 	fmt.Println("Sending order event to elevator\n")
 	err := elev.SendEvent(Move, moveCtx)
 	if err != nil {
+		fmt.Println("Failed to send order to elevator")
 		// Return any other errors
 		return err
 	}

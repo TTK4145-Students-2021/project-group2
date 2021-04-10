@@ -27,11 +27,11 @@ const (
 	NoOp           EventType = ""
 	Initialize     EventType = "Initialize"
 	SetInitialized EventType = "SetInitialized"
-	OpenDoors      EventType = "OpenDoors"
-	CloseDoors     EventType = "CloseDoors"
+	// OpenDoors      EventType = "OpenDoors"
+	// CloseDoors     EventType = "CloseDoors"
 	Move           EventType = "Move"
 	ArriveAtFloor  EventType = "ArriveAtFloor"
-	StopAtFloor    EventType = "StopAtFloor"
+	// StopAtFloor    EventType = "StopAtFloor"
 )
 
 
@@ -106,17 +106,17 @@ func NewElevatorMachine() *ElevatorMachine {
 			Initializing: State{
 				Action: &InitAction{},
 				Events: Events{
-					SetInitialized: AtFloorDoorsClosed,
+					SetInitialized: AtFloorDoorsOpen,
 				},
 			},
 
 			Moving: State{
 				Action: &MovingAction{},
 				Events: Events{
-					ArriveAtFloor: AtFloorDoorsClosed,
+					ArriveAtFloor: AtFloorDoorsOpen,
 				},
 			},
-
+			/*
 			AtFloorDoorsClosed: State{
 				Action: &AtFloorClosedAction{},
 				Events: Events{
@@ -124,11 +124,12 @@ func NewElevatorMachine() *ElevatorMachine {
 					Move:      Moving,
 				},
 			},
+			*/
 
 			AtFloorDoorsOpen: State{
 				Action: &AtFloorOpenAction{},
 				Events: Events{
-					CloseDoors: AtFloorDoorsClosed,
+					Move: Moving,
 				},
 			},
 		},
@@ -165,14 +166,6 @@ func (elev *ElevatorMachine) SendEvent(event EventType, eventCtx EventContext) e
 		nextState, err := elev.getNextState(event)
 		if err != nil {
 			return ErrEventRejected
-		}
-
-		if nextState == Moving {
-			if elev.AtTop {
-				return ErrIllegalMoveUp
-			} else if elev.AtBottom {
-				return ErrIllegalMoveDown
-			}
 		}
 
 		// Identify the state definition for the next state
@@ -277,7 +270,7 @@ func (a *MovingAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Eve
 	switch tf := targetFloor; {
 	case tf == elev.CurrentFloor:
 		fmt.Println("Elevator already at destination")
-		return OpenDoors // Simply open doors
+		return ArriveAtFloor // Simply open doors
 	case tf < elev.CurrentFloor:
 		fmt.Println("Elevator moving down")
 		dir = MD_Down
@@ -343,10 +336,10 @@ func (a *MovingAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Eve
 func (a *AtFloorClosedAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
 	elev.Available = false
 	SetDoorOpenLamp(false)
+	
 	return NoOp
-
 	// TODO: What if you want to open the door or do something else here???
-}
+} // TODO: THIS FUNCTION IS DEPRECATED. REMOVE AND FIX THE SYSTEM!
 
 // Execute when AtFloorDoorOpen state is set
 func (a *AtFloorOpenAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {

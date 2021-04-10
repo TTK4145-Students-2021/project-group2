@@ -68,7 +68,7 @@ func initAllElevatorStatuses() [config.NumElevators]ElevatorStatus {
 	for i := 1; i < (config.NumElevators+1); i++{
 		Status := ElevatorStatus{
 			ID : i,
-			Pos : 0,
+			Pos : 1,
 			OrderList :OrderList,  
 			Dir : 2,
 			IsOnline : false,        //NB isOline is deafult false
@@ -107,17 +107,17 @@ func updateOrderListButton(btnEvent elevio.ButtonEvent, status *ElevatorStatus) 
 func updateOrderListButton(btnEvent messages.ButtonEvent_message, status *ElevatorStatus) {
 	//if 	
 	if btnEvent.Button == messages.BT_Cab {
-		status.CabOrder[btnEvent.Floor-1] = true
+		status.CabOrder[btnEvent.Floor] = true
 	} else {
 		placeInList := 0
 		if btnEvent.Button == messages.BT_HallUp{
-			placeInList = btnEvent.Floor - 1
+			placeInList = btnEvent.Floor
 		} else {
-			placeInList = config.NumElevators + btnEvent.Floor - 2
+			placeInList = config.NumElevators + btnEvent.Floor - 1
 		}	
 		if status.OrderList[placeInList].HasOrder == false {
-			fmt.Println("im here")
 			status.OrderList[placeInList].HasOrder = true
+			status.OrderList[placeInList].VersionNum += 1
 		}
 	}
 }
@@ -226,11 +226,19 @@ func updateOrderListOther(incomingStatus ElevatorStatus, list *[config.NumElevat
 }
 func updateOrderListCompleted(list *[config.NumElevators]ElevatorStatus){
 	curFloor := list[config.ID-1].Pos
+	fmt.Println(curFloor)
+	// checkis if the elevator has a cab call for the current floor
+	if list[config.ID-1].CabOrder[curFloor-1] == true{
+		list[config.ID-1].CabOrder[curFloor-1] = false
+	}
 
+	//Note: this foorloop is here beacuse you have to check both up and down for the same floor, which are stored in diffrent paces in the list
+	// TODO: remove this foor loop 
 	for i := 0; i < len(list[config.ID-1].OrderList); i++{
+
+		//checks if ther is a hall call at the current floor
 		if list[config.ID-1].OrderList[i].HasOrder && list[config.ID-1].OrderList[i].Floor == curFloor{
 			list[config.ID-1].OrderList[i].HasOrder = false
-			break
 		}
 	}
 }
@@ -286,8 +294,10 @@ func RunOrders(button_press <- chan messages.ButtonEvent_message,  //Elevator co
 		}
 		
 		goTo := pickOrder(&allElevators)
-		fmt.Println("Sending out order:", goTo) 
-		go sendingElevatorToFloor(go_to_floor, goTo)
+		if goTo != 0 {
+			fmt.Println("Sending out order:", goTo) 
+			go sendingElevatorToFloor(go_to_floor, goTo)
+		}
 		printElevatorStatus(allElevators[config.ID-1]) 
 	}                                                                                                                                                                                                              
 }
@@ -298,15 +308,15 @@ func RunOrders(button_press <- chan messages.ButtonEvent_message,  //Elevator co
 
 // Functions for printing out the Elevator staus and OrderList
 func printOrderList(list [config.NumFloors*2-2]order){
-	fmt.Println("This is the elevators orderlist")
+	fmt.Println("Orderlist")
 	for i := 0; i < len(list); i++ {
-		fmt.Println("Floor: ", list[i].Floor, " |direction: ", list[i].Direction, " |Order: ",list[i].HasOrder, " |Version", list[i].VersionNum)
-		fmt.Println("Costs", list[i].Costs,"| time", list[i].TimeStamp)
+		fmt.Println("Floor: ", list[i].Floor, " |direction: ", list[i].Direction, " |Order: ",list[i].HasOrder, " |Version", list[i].VersionNum, "Costs", list[i].Costs,"| time", list[i].TimeStamp)
 	}
 }
 
 func printElevatorStatus(status ElevatorStatus){
-	fmt.Println("ID: ", status.ID, " |Currentfloor: ", status.Pos, " |Direction: ", status.Dir, " |cabOrder ",status.CabOrder)
+	fmt.Println("ID: ", status.ID, " |Currentfloor: ", status.Pos, "|cabOrder ",status.CabOrder)
 	printOrderList(status.OrderList)
-
 }
+
+// |Direction: ", status.Dir,
