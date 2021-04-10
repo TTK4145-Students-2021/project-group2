@@ -39,7 +39,7 @@ func initAllElevatorStatuses() [config.NumElevators]ElevatorStatus {
 	for i := 0; i < (config.NumFloors-1); i++ {
 		OrderList[i] = order{
 			HasOrder : false,
-			Floor : i+1,
+			Floor : i,
 			Direction : 0,	//up = 0, down = 1
 			VersionNum : 0,
 			Costs : [config.NumElevators]int{},
@@ -49,7 +49,7 @@ func initAllElevatorStatuses() [config.NumElevators]ElevatorStatus {
 	for i := config.NumFloors-1 ; i < (config.NumFloors*2-2); i++ {
 		OrderList[i] = order{
 			HasOrder : false,
-			Floor : i+3-config.NumFloors,
+			Floor : i+2-config.NumFloors,
 			Direction : 1,	//up = 0, down = 1
 			VersionNum : 0,
 			Costs : [config.NumElevators]int{},

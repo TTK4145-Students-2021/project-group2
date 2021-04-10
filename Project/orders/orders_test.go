@@ -80,13 +80,15 @@ func TestOrders(t *testing.T) {
 		Button : 0, // 0 = up, 1 = down , 2 = hall
 	}
 	btnEvent2 := messages.ButtonEvent_message{
-		Floor : 3,
-		Button : 1,
+		Floor : 2,
+		Button : 0,
 	 } // 0 = up, 1 = down , 2 = hall
 	new_floor <- 0
 	time.Sleep(1000000000)
-	button_press <- btnEvent1
+	button_press <- btnEvent2
 	time.Sleep(1000000000)
+	return
+	button_press <- btnEvent1
 	new_floor <- 2
 	door_status <- true
 	time.Sleep(10000000000)
@@ -96,7 +98,7 @@ func TestOrders(t *testing.T) {
 	received_elevator_update <- Status3
 	button_press <- btnEvent2
 	time.Sleep(10000000000)
-	return
+	
 	new_floor <- 3
 	time.Sleep(2000000000)
 	door_status <- true
