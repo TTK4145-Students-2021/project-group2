@@ -150,10 +150,7 @@ func costFunction(num int, list *[config.NumElevators]ElevatorStatus){
 			}
 		}
 		
-		floorsAway:= curOrder.Floor - list[i].Pos
-		if floorsAway < 0 {                         // takeing abs of floorsAway
-			floorsAway = - floorsAway
-		} 
+		floorsAway:= floorDiffernce(list[i].Pos, curOrder.Floor)
 		cost += floorsAway                                   
 		timeWaited := time.Now().Sub(curOrder.TimeStamp)
 		//larger than 1 min
@@ -170,9 +167,18 @@ func costFunction(num int, list *[config.NumElevators]ElevatorStatus){
 
 }
 
+func floorDiffernce(elevatorFloor int, goingToFloor int) int {
+	floorsAway:= elevatorFloor - goingToFloor
+		if floorsAway < 0 {                         // takeing abs of floorsAway
+			floorsAway = - floorsAway
+		} 
+	return floorsAway
+}
+
 
 func pickOrder(list *[config.NumElevators]ElevatorStatus) int {
 
+	
 
 	for i := 0; i < len(list[config.ID-1].OrderList); i++{
 		if list[config.ID-1].OrderList[i].HasOrder {
@@ -181,6 +187,21 @@ func pickOrder(list *[config.NumElevators]ElevatorStatus) int {
 	}
 	pickedOrder := 0
 
+	
+	shortestCabDistance := config.NumFloors*10     // random variable larger than config.numfloors
+
+	for j := 0; j < config.NumFloors; j++{
+		if list[config.ID-1].CabOrder[j] == true{
+			curCabDistance := floorDiffernce(list[config.ID-1].Pos , j)
+			if curCabDistance < shortestCabDistance{
+				pickedOrder = j 
+			}
+		}
+	}
+	// if there is an cab order return that as going to floor
+	if pickedOrder != 0{
+		return pickedOrder
+	}
 	// Pick the order where you have the lowest cost
 	for i := 0; i < len(list[config.ID-1].OrderList); i++{
 		if list[config.ID-1].OrderList[i].HasOrder {
@@ -201,7 +222,6 @@ func pickOrder(list *[config.NumElevators]ElevatorStatus) int {
 			}		
 		}
 	}
-
 	return pickedOrder    //return the floor that the elevator should go to
 }
 
@@ -258,10 +278,10 @@ func runOrders("channel for reciving buttonEvemts from elevator", "channel for r
 */
 
 func RunOrders(button_press <- chan messages.ButtonEvent_message,  //Elevator communiaction
-	 //received_elevator_update <- chan ElevatorStatus,    //Network communication
+	 received_elevator_update <- chan ElevatorStatus,    //Network communication
 	 new_floor <- chan int,   //Elevator communiaction
 	 door_status <- chan bool,   //Elevator communiaction
-	 //send_status chan <- ElevatorStatus, //Network communication
+	 send_status chan <- ElevatorStatus, //Network communication
 	 go_to_floor chan <- int){    //Elevator communiaction
 	
 	fmt.Println("Order module initializing....")
