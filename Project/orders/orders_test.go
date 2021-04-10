@@ -38,7 +38,7 @@ func TestOrders(t *testing.T) {
 	
 
 	Status2 := ElevatorStatus{
-		ID : 2,
+		ID : 1,
 		Pos : 0,
 		OrderList :OrderList,  
 		Dir : 2,
@@ -48,8 +48,8 @@ func TestOrders(t *testing.T) {
 		IsAvailable : true,        //NB isAvaliable is deafult false
 	}
 	Status3 := ElevatorStatus{
-		ID : 3,
-		Pos : 0,
+		ID : 2,
+		Pos : 3,
 		OrderList :OrderList,  
 		Dir : 2,
 		IsOnline : true,        //NB isOline is deafult false
@@ -60,7 +60,6 @@ func TestOrders(t *testing.T) {
 	
 
 	//for testing orders module
-	// for tesing
 	button_press := make(chan messages.ButtonEvent_message)
 	received_elevator_update := make(chan ElevatorStatus)
 	new_floor := make(chan int)
@@ -77,21 +76,27 @@ func TestOrders(t *testing.T) {
 
 	
 	btnEvent1 := messages.ButtonEvent_message{
-		Floor : 3,
+		Floor : 1,
 		Button : 0, // 0 = up, 1 = down , 2 = hall
 	}
 	btnEvent2 := messages.ButtonEvent_message{
-		Floor : 1,
-		Button : 0,
+		Floor : 3,
+		Button : 1,
 	 } // 0 = up, 1 = down , 2 = hall
-
+	new_floor <- 0
+	time.Sleep(1000000000)
+	button_press <- btnEvent1
+	time.Sleep(1000000000)
 	new_floor <- 2
+	door_status <- true
+	time.Sleep(10000000000)
+	door_status <- false
 	time.Sleep(5000000000)
 	received_elevator_update <- Status2
 	received_elevator_update <- Status3
-	time.Sleep(5000000000)
-	button_press <- btnEvent1
-	time.Sleep(5000000000)
+	button_press <- btnEvent2
+	time.Sleep(10000000000)
+	return
 	new_floor <- 3
 	time.Sleep(2000000000)
 	door_status <- true
