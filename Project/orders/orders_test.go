@@ -12,9 +12,9 @@ func TestOrders(t *testing.T) {
 	fmt.Println("Start")
 	// creating 1 ElevatorStatus
 	
-	OrderList := [config.NumFloors*2-2]order{} 
+	OrderList := [config.NumFloors*2-2]HallOrder{} 
 	for i := 0; i < (config.NumFloors-1); i++ {
-		OrderList[i] = order{
+		OrderList[i] = HallOrder{
 			HasOrder : false,
 			Floor : i+1,
 			Direction : 0,	//up = 0, down = 1
@@ -24,7 +24,7 @@ func TestOrders(t *testing.T) {
 		}
 	}
 	for i := config.NumFloors-1 ; i < (config.NumFloors*2-2); i++ {
-		OrderList[i] = order{
+		OrderList[i] = HallOrder{
 			HasOrder : false,
 			Floor : i+3-config.NumFloors,
 			Direction : 1,	//up = 0, down = 1
@@ -33,7 +33,7 @@ func TestOrders(t *testing.T) {
 			TimeStamp : time.Now(),
 		}
 	}
-	CabOrder := [config.NumFloors]bool{false}
+	CabOrders := [config.NumFloors]bool{false}
 	
 	
 
@@ -44,7 +44,7 @@ func TestOrders(t *testing.T) {
 		Dir : 2,
 		IsOnline : true,        //NB isOline is deafult false
 		DoorOpen : false,
-		CabOrder: CabOrder,
+		CabOrders: CabOrders,
 		IsAvailable : true,        //NB isAvaliable is deafult false
 	}
 	Status3 := ElevatorStatus{
@@ -54,7 +54,7 @@ func TestOrders(t *testing.T) {
 		Dir : 2,
 		IsOnline : true,        //NB isOline is deafult false
 		DoorOpen : false,
-		CabOrder: CabOrder,
+		CabOrders: CabOrders,
 		IsAvailable : true,        //NB isAvaliable is deafult false
 	}
 	
