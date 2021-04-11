@@ -130,17 +130,16 @@ func costFunction(num int, list *[config.NumElevators]ElevatorStatus){
 		}
 
 		// for loop checking if the elevator has a CabOrders
-		for j := 0; j < config.NumFloors; j++{
+		for j := 0; j < config.NumFloors; j++{                 //organize into function
 			if elevator.CabOrders[j] == true{
 				cost += 1000
 				break
 			}
 		}
 		
-		floorsAway:= floorDiffernce(list[i].Pos, curOrder.Floor)
-		cost += floorsAway                                   
-		timeWaited := time.Now().Sub(curOrder.TimeStamp)
-		//larger than 1 min
+		cost += distanceFromOrder(list[i].Pos, curOrder.Floor)                                  
+		timeWaited := time.Now().Sub(curOrder.TimeStamp)               //organize into function
+		//larger than 1 min																	
 		if timeWaited > time.Duration(60000000000){
 			cost += -1
 		}
@@ -154,7 +153,7 @@ func costFunction(num int, list *[config.NumElevators]ElevatorStatus){
 
 }
 
-func floorDiffernce(elevatorFloor int, goingToFloor int) int {
+func distanceFromOrder(elevatorFloor int, goingToFloor int) int {
 	floorsAway:= elevatorFloor - goingToFloor
 		if floorsAway < 0 {                         // takeing abs of floorsAway
 			floorsAway = - floorsAway
@@ -163,28 +162,29 @@ func floorDiffernce(elevatorFloor int, goingToFloor int) int {
 }
 
 
-func pickOrder(list *[config.NumElevators]ElevatorStatus) int {
+func goToFloor(list *[config.NumElevators]ElevatorStatus) int {
 
 	for i := 0; i < len(list[config.ID].OrderList); i++{
 		if list[config.ID].OrderList[i].HasOrder {
 			costFunction(i,list)
 		}
 	}
-	pickedOrder := 0
+	pickedOrder := -1
 
 	
-	shortestCabDistance := config.NumFloors*10     // random variable larger than config.numfloors
 
+	//	checking if the elevator has any cabOrders and if assigning that ass the goToFloor
+	shortestCabDistance := config.NumFloors*10     // random variable larger than config.numfloors
 	for j := 0; j < config.NumFloors; j++{
 		if list[config.ID].CabOrders[j] == true{
-			curCabDistance := floorDiffernce(list[config.ID].Pos , j)
+			curCabDistance := distanceFromOrder(list[config.ID].Pos , j)
 			if curCabDistance < shortestCabDistance{
 				pickedOrder = j 
 			}
 		}
 	}
 	// if there is an cab order return that as going to floor
-	if pickedOrder != 0{
+	if pickedOrder != -1{
 		return pickedOrder
 	}
 	// Pick the order where you have the lowest cost
@@ -301,10 +301,10 @@ func RunOrders(button_press <- chan messages.ButtonEvent_message,  //Elevator co
 
 		}
 		allElevators[config.ID].IsAvailable = true
-		goTo := pickOrder(&allElevators)
-		if goTo != 0 {
-			fmt.Println("Sending out order:", goTo) 
-			go sendingElevatorToFloor(go_to_floor, goTo)
+		assignedFloor := goToFloor(&allElevators)
+		if  assignedFloor != -1 {
+			fmt.Println("Sending out order:", assignedFloor) 
+			go sendingElevatorToFloor(go_to_floor, assignedFloor)
 			allElevators[config.ID].IsAvailable = false
 			go sendOutStatus(send_status, allElevators)
 		}
