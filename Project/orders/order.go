@@ -144,11 +144,11 @@ func waitingTimePenalty(curOrder HallOrder) int {
 	extraCost := 0
 	timeWaited := time.Now().Sub(curOrder.TimeStamp) //organize into function
 	//larger than 1 min
-	if timeWaited > time.Duration(time.Minutes*1) {
+	if timeWaited > time.Duration(time.Minute*1) {
 		extraCost += -1
 	}
 	//larger than 3 min
-	if timeWaited > time.Duration(time.Minutes*3) {
+	if timeWaited > time.Duration(time.Minute*3) {
 		extraCost += -1
 	}
 	return extraCost
@@ -300,8 +300,8 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 			//go sendOutStatus(send_status, allElevators)
 
 		case isOpen := <-door_status:
-			if door_statue = true{
-				time.Sleep(time.Seconds*3)
+			if isOpen == true {
+				time.Sleep(time.Second * 3)
 			} //recives a bool value
 			updateElevatorStatusDoor(isOpen, &allElevators)
 			if isOpen == true {

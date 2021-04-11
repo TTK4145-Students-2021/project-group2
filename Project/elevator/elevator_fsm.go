@@ -31,7 +31,6 @@ const (
 	SetInitialized EventType = "SetInitialized"
 	Move           EventType = "Move"
 	ArriveAtFloor  EventType = "ArriveAtFloor"
-	// StopAtFloor    EventType = "StopAtFloor"
 )
 
 // ElevChannels contain all the channels needed for the elevator to work
@@ -110,15 +109,6 @@ func NewElevatorMachine() *ElevatorMachine {
 					ArriveAtFloor: AtFloorDoorsOpen,
 				},
 			},
-			/*
-				AtFloorDoorsClosed: State{
-					Action: &AtFloorClosedAction{},
-					Events: Events{
-						OpenDoors: AtFloorDoorsOpen,
-						Move:      Moving,
-					},
-				},
-			*/
 
 			AtFloorDoorsOpen: State{
 				Action: &AtFloorOpenAction{},
@@ -334,6 +324,8 @@ func (a *MovingAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Eve
 				SetMotorDirection(dir)
 			}
 		}
+
+		// POTENTIAL IMPROVEMENT: Implement a channel than enables breaking the elevators operation midway
 	}
 }
 
