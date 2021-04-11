@@ -4,12 +4,9 @@ import (
 	//"os"
 	"time"
 	"fmt"
-
 	"../config"
 	"../elevio"
 )
-
-
 
 // assumes buttonEvent as input
 // bcast elevID, targetFloor, dir
@@ -110,78 +107,171 @@ func updateOrderListButton(btnEvent elevio.ButtonEvent, status *ElevatorStatus) 
 func updateOtherElev(incomingStatus ElevatorStatus, list *[config.NumElevators]ElevatorStatus)  {
 	list[incomingStatus.ID-1] = incomingStatus    //accountign for zero indexing
 }
-/*
+func updateElevatorStatusDoor(value bool,list *[config.NumElevators]ElevatorStatus){
+	list[config.ID-1].doorOpen = value
+}
+func updateElevatorStatusFloor(pos int,list *[config.NumElevators]ElevatorStatus){
+	list[config.ID-1].pos = pos
+}
+
+func costFunction(num int, list *[config.NumElevators]ElevatorStatus){
+	curOrder := list[config.ID-1].orderList[num]
+	for i := 0; i < config.NumElevators; i++{//i is already 0 indexed
+		elevator := list[i]
+		cost := 0
+		if !elevator.isAvailable || !elevator.isOnline{
+			cost += 1000
+		}
+
+		// for loop checking if the elevator has a cabOrder
+		for j := 0; j < config.NumFloors; j++{
+			if elevator.cabOrder[j] == true{
+				cost += 1000
+				break
+			}
+		}
+		
+		floorsAway:= curOrder.floor - list[i].pos
+		if floorsAway < 0 {                         // takeing abs of floorsAway
+			floorsAway = - floorsAway
+		} 
+		cost += floorsAway                                   
+		timeWaited := time.Now().Sub(curOrder.timeStamp)
+		//larger than 1 min
+		if timeWaited > time.Duration(60000000000){
+			cost += -1
+		}
+		//larger than 3 min
+		if timeWaited > time.Duration(180000000000){
+			cost += -1
+		}
+		//fmt.Println(cost)
+		list[config.ID-1].orderList[num].costs[i] = cost
+	}
+
+}
+
+
+func pickOrder(list *[config.NumElevators]ElevatorStatus) int {
+
+
+	for i := 0; i < len(list[config.ID-1].orderList); i++{
+		if list[config.ID-1].orderList[i].hasOrder {
+			costFunction(i,list)
+		}
+	}
+	pickedOrder := 0
+
+	// Pick the order where you have the lowest cost
+	for i := 0; i < len(list[config.ID-1].orderList); i++{
+		if list[config.ID-1].orderList[i].hasOrder {
+
+			isTaken := 0
+			for j, num := range list[config.ID-1].orderList[i].costs{
+				lowestCost := 500
+				if num < lowestCost{
+					isTaken = j + 1
+				}
+			if isTaken > 0{
+				list[isTaken-1].isAvailable = false
+				if isTaken-1 == config.ID-1{
+				pickedOrder = list[config.ID-1].orderList[i].floor
+				}
+			}
+
+			}		
+		}
+	}
+
+	return pickedOrder    //return the floor that the elevator should go to
+}
+
+
 
 func updateOrderListOther(incomingStatus ElevatorStatus, list *[config.NumElevators]ElevatorStatus) {
-	This function is suppoesed to update the order list of allElvartors[config.ID] based on the order list from the incoming ElevatorStatus.
-	Chech if their is a newer version number on all orders. Updated if there is. 
+
+	for i := 0; i < len(list[config.ID-1].orderList); i++{
+
+		// the first if sentences checks for faiure is the version controll
+		if incomingStatus.orderList[i].versionNum == list[config.ID-1].orderList[i].versionNum && incomingStatus.orderList[i].hasOrder != list[config.ID-1].orderList[i].hasOrder {
+			fmt.Println("There is smoething worng with the version controll of the order system")
+			list[config.ID-1].orderList[i].hasOrder = true
+			list[config.ID-1].orderList[i].versionNum += 1
+		}
+		// this if statement checks if the order should be updated and updates it
+		if incomingStatus.orderList[i].versionNum > list[config.ID-1].orderList[i].versionNum{
+			list[config.ID-1].orderList[i].hasOrder = incomingStatus.orderList[i].hasOrder
+			list[config.ID-1].orderList[i].versionNum = incomingStatus.orderList[i].versionNum
+		}
+	}
+}
+func updateOrderListCompleted(list *[config.NumElevators]ElevatorStatus){
+	curFloor := list[config.ID-1].pos
+
+	for i := 0; i < len(list[config.ID-1].orderList); i++{
+		if list[config.ID-1].orderList[i].hasOrder && list[config.ID-1].orderList[i].floor == curFloor{
+			list[config.ID-1].orderList[i].hasOrder = false
+			break
+		}
+	}
 }
 
-func updateElevatorStatusDoor(isOpen){
-
+func sendOutStatus(channel chan<- ElevatorStatus ,list [config.NumElevators]ElevatorStatus){
+	channel <- list[config.ID-1]
 }
-func updateElevatorStatusFloor(floor){
-	
-}
-
-//set the costs for an order in the Orderlist
-func costFunction(floor,direction, list *[config.NumElevators]ElevatorStatus){
-	
+func sendingElevatorToFloor(channel chan<- int, goToFloor int){
+	channel <- goToFloor
 }
 
-func pickOrder(list [config.NumElevators]ElevatorStatus) {
-	update costs for all the orders
-	pick the order where you have the lowest cost. 
-}
 
 /*
-	assignedFloor = 0     //Defalut assigned floor
-	// Itterate through up orders and calcuate all the costs
+func runOrders("channel for reciving buttonEvemts from elevator", "channel for reciving changes in Door from elevator"
+"channel for reciving changes in current floor from Elevator", "channel for sending "go to floor" (int) too Elevator", 
+"channel for reciving incoming Elevatorstatuses","channel for sending out outgoing Elevatorstatuses" ) {
+*/
 
-	for order := range allElevators[config.ID].orderList:    
-		if (order.hasOrder):
-			order.costs = costFunction(order)  //*****Should you take a copy here????
-		else 
-			var zeros[]              //TODO: Needs to be finished. Idea is just to inseart a slice of zeros. 
-			order.costs = [config.NumElevators]
-	
-	//TODO:itterate through down orders and calcuate all the costs	
-	
-
-}
-
-
-func runOrders("channel for sending buttonEvemts from elevator", "channel for seding changes in Door from elevator"
-"channel for sending changes in current floor from Elevator", "channel for sending changes in current floor from Elevator" ) {
-
+func runOrders(button_press <- chan elevio.ButtonEvent,
+	 received_elevator_update <- chan ElevatorStatus,
+	 new_floor <- chan int, 
+	 door_status <- chan bool,
+	 send_status chan <- ElevatorStatus,
+	 go_to_floor chan <- int){
 	
 	allElevators := initAllElevatorStatuses()
-	myElevatorStatus := initMyElevatorStatus()
-	allElevators[config.ID-1] = myElevatorStatus
+	allElevators[config.ID-1].isOnline = true
+	allElevators[config.ID-1].isAvailable = true
 
 	for {
 		select{
-		case buttonEvent := <- HallOrder:
-			updateOrderListButton(buttonEvent)
+		case buttonEvent := <- button_press:
+			updateOrderListButton(buttonEvent, &allElevators[config.ID-1])
+			go sendOutStatus(send_status, allElevators)
 		
-		case elevatorStatus := <- ReceivedElevatorUpdate: // new update
+		case elevatorStatus := <- received_elevator_update: // new update
 			// update own orderlist and otherElev with the incomming elevatorStatus
 			updateOtherElev(elevatorStatus, &allElevators)
-			updateOrderListOther()
+			updateOrderListOther(elevatorStatus, &allElevators)
 
-		case floor := <- NewFloor:
-			updateElevatorStatusFloor(floor)
+		case floor := <- new_floor:
+			updateElevatorStatusFloor(floor, &allElevators)
+			go sendOutStatus(send_status, allElevators)
 	
-		case isOpen := <-isDoorOpen: //recives a bool value
-			updateElevatorStatusDoor(isOpen)
+		case isOpen := <-door_status: //recives a bool value
+			updateElevatorStatusDoor(isOpen, &allElevators)
 			if(isOpen == true){
-				updateOrderListCompleted(myElevatorStatus.floor)
+				updateOrderListCompleted(&allElevators)
 			}
-		}  
+			go sendOutStatus(send_status, allElevators)
+
+		}
+		
+		goTo := pickOrder(&allElevators)
+		fmt.Println(goTo) 
+		go sendingElevatorToFloor(go_to_floor, goTo)
+		printElevatorStatus(allElevators[config.ID-1]) 
 	}                                                                                                                                                                                                              
-	pickOrder()
 }
-*/
+
 
 
 
