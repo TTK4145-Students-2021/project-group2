@@ -23,6 +23,7 @@ type ControllerChannels struct {
 	Redirect_button_action chan<- messages.ButtonEvent_message
 	Receive_order          <-chan int //Some defined ExecOrder message type to be implemented!!
 	Respond_order          chan<- error
+	ElevatorUpdateRequest  <-chan bool
 	ControllerReady        chan<- bool
 	// TODO: How do we tell the controller to turn off lights and such??
 }
@@ -63,6 +64,8 @@ func (ctr *Controller) Run() error {
 	if err != nil {
 		return err
 	}
+	SetFloorIndicator(elev.CurrentFloor)
+
 	// Start elevio routines
 	go PollButtons(drv_buttons)
 	go PollFloorSensor(drv_floors)
@@ -118,13 +121,13 @@ func (ctr *Controller) Run() error {
 			*/
 
 			// MIGHT NOT BE NECESSARY IF THE ORDER MODULE IS CONTINUOUSLY UPDATED
-		//	if !elev.Available {
-		//		channels.Respond_order <- ErrElevUnavailable // Tell the order system error is unavailable
-		//		break
-		//	}
+			//	if !elev.Available {
+			//		channels.Respond_order <- ErrElevUnavailable // Tell the order system error is unavailable
+			//		break
+			//	}
 
 			go elev.GotoFloor(a)
-			/*
+		/*
 			//err := elev.GotoFloor(targetFloor)
 			err := elev.GotoFloor(a)
 			if err != nil {
@@ -133,9 +136,12 @@ func (ctr *Controller) Run() error {
 			} else {
 				channels.Respond_order <- nil
 			}
-			*/
+		*/
 
-			// TODO: Do we need an option to shut down this loop? Probably
+		// TODO: Do we need an option to shut down this loop? Probably
+		case <-channels.ElevatorUpdateRequest:
+			channels.Current_floor <- elev.CurrentFloor
+			channels.Elev_available <- elev.Available
 		}
 	}
 }
@@ -157,9 +163,7 @@ func (ctr *Controller) PollElevAvailability(elev *ElevatorMachine) {
 	ctr.Channels.Elev_available <- prev
 	for {
 		time.Sleep(_ctrPollRate)
-		elev.mutex.Lock()
 		v := ctr.Elev.Available
-		elev.mutex.Unlock()
 
 		if v != prev {
 			ctr.Channels.Elev_available <- v
@@ -173,18 +177,18 @@ func (ctr *Controller) PollElevFloor(elev *ElevatorMachine) {
 	ctr.Channels.Current_floor <- prev
 	for {
 		time.Sleep(_ctrPollRate)
+
 		elev.mutex.Lock()
 		v := ctr.Elev.CurrentFloor
 		elev.mutex.Unlock()
 
 		if v != prev && v != -1 {
+			SetFloorIndicator(v)
 			ctr.Channels.Current_floor <- v
 			prev = v
 		}
 	}
 }
-
-
 
 /*________________________Wrapper functions___________________________*/
 /*These are used to simplify the elevator interface from the controllers perspective*/
