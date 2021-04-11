@@ -68,8 +68,9 @@ func (ctr *Controller) Run() error {
 	go PollFloorSensor(drv_floors)
 	go PollObstructionSwitch(drv_obstr)
 
-	// Send information to recipients whether elevator is available
+	// Send elevator status to external listener
 	go ctr.PollElevAvailability(elev)
+	go ctr.PollElevFloor(elev)
 
 	ctr.Channels.ControllerReady <- true
 
@@ -122,7 +123,7 @@ func (ctr *Controller) Run() error {
 		//		break
 		//	}
 
-			go elev.|Floor(a)
+			go elev.GotoFloor(a)
 			/*
 			//err := elev.GotoFloor(targetFloor)
 			err := elev.GotoFloor(a)
@@ -156,14 +157,30 @@ func (ctr *Controller) PollElevAvailability(elev *ElevatorMachine) {
 	ctr.Channels.Elev_available <- prev
 	for {
 		time.Sleep(_ctrPollRate)
-		ctr.Elev.mutex.Lock()
+		elev.mutex.Lock()
 		v := ctr.Elev.Available
-		ctr.Elev.mutex.Unlock()
+		elev.mutex.Unlock()
 
 		if v != prev {
 			ctr.Channels.Elev_available <- v
 		}
 		prev = v
+	}
+}
+
+func (ctr *Controller) PollElevFloor(elev *ElevatorMachine) {
+	prev := elev.CurrentFloor
+	ctr.Channels.Current_floor <- prev
+	for {
+		time.Sleep(_ctrPollRate)
+		elev.mutex.Lock()
+		v := ctr.Elev.CurrentFloor
+		elev.mutex.Unlock()
+
+		if v != prev && v != -1 {
+			ctr.Channels.Current_floor <- v
+			prev = v
+		}
 	}
 }
 
