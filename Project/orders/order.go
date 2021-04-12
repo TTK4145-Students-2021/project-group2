@@ -2,291 +2,340 @@ package orders
 
 import (
 	//"os"
-	"time"
 	"fmt"
+	"time"
+
 	"../config"
-	"../elevio"
+	"../messages"
 )
 
 // assumes buttonEvent as input
 // bcast elevID, targetFloor, dir
 
-type order struct {
-	hasOrder bool
-	floor int
-	direction int	//up = 0, down = 1
-	versionNum int
-	costs [config.NumElevators] int
-	timeStamp time.Time
+type HallOrder struct {
+	HasOrder   bool
+	Floor      int
+	Direction  int //up = 0, down = 1
+	VersionNum int
+	Costs      [config.NumElevators]int
+	TimeStamp  time.Time
 }
 
 type ElevatorStatus struct {
-	ID  int
-	pos int
-	orderList [config.NumFloors*2-2] order  // 
-	dir elevio.MotorDirection
-	isOnline bool
-	doorOpen bool
-	cabOrder[config.NumFloors] bool
-	isAvailable bool
+	ID          int
+	Pos         int
+	OrderList   [config.NumFloors*2 - 2]HallOrder //
+	Dir         int                               //up = 0, down = 1, stop = 2
+	IsOnline    bool
+	DoorOpen    bool
+	CabOrders   [config.NumFloors]bool
+	IsAvailable bool
 }
 
-func returnOrder() {
-	// Dummy function to test elevatorController
+func initOrderList() [config.NumFloors*2 - 2]HallOrder {
+	OrderList := [config.NumFloors*2 - 2]HallOrder{}
+
+	// initalizing HallUp
+
+	for i := 0; i < (config.NumFloors - 1); i++ {
+		OrderList[i] = HallOrder{
+			HasOrder:   false,
+			Floor:      i,
+			Direction:  0, //up = 0, down = 1
+			VersionNum: 0,
+			Costs:      [config.NumElevators]int{},
+			TimeStamp:  time.Now(),
+		}
+	}
+
+	// initalizing HallDown
+	for i := config.NumFloors - 1; i < (config.NumFloors*2 - 2); i++ {
+		OrderList[i] = HallOrder{
+			HasOrder:   false,
+			Floor:      i + 2 - config.NumFloors,
+			Direction:  1, //up = 0, down = 1
+			VersionNum: 0,
+			Costs:      [config.NumElevators]int{},
+			TimeStamp:  time.Now(),
+		}
+	}
+	return OrderList
 }
 
 func initAllElevatorStatuses() [config.NumElevators]ElevatorStatus {
 
-	OrderList := [config.NumFloors*2-2]order{} 
+	CabOrders := [config.NumFloors]bool{false}
+	OrderList := initOrderList()
 
-	//files in the Orderlist with fake defualt order statuses
-	for i := 0; i < (config.NumFloors-1); i++ {
-		OrderList[i] = order{
-			hasOrder : false,
-			floor : i+1,
-			direction : 0,	//up = 0, down = 1
-			versionNum : 0,
-			costs : [config.NumElevators]int{},
-			timeStamp : time.Now(),
-		}
-	}
-	for i := config.NumFloors-1 ; i < (config.NumFloors*2-2); i++ {
-		OrderList[i] = order{
-			hasOrder : false,
-			floor : i+3-config.NumFloors,
-			direction : 1,	//up = 0, down = 1
-			versionNum : 0,
-			costs : [config.NumElevators]int{},
-			timeStamp : time.Now(),
-		}
-	}
-	CabOrder := [config.NumFloors]bool{false}
+	listOfElevators := [config.NumElevators]ElevatorStatus{}
 
-
-	listOfElevators :=[config.NumElevators]ElevatorStatus{}
-
-	for i := 1; i < (config.NumElevators+1); i++{
+	for i := 0; i < (config.NumElevators); i++ {
 		Status := ElevatorStatus{
-			ID : i,
-			pos : 0,
-			orderList :OrderList,  
-			dir : elevio.MD_Stop,
-			isOnline : false,        //NB isOline is deafult false
-			doorOpen : false,
-			cabOrder: CabOrder,
-			isAvailable : false,        //NB isAvaliable is deafult false
+			ID:          i,
+			Pos:         1,
+			OrderList:   OrderList,
+			Dir:         2,
+			IsOnline:    false, //NB isOline is deafult false
+			DoorOpen:    false,
+			CabOrders:   CabOrders,
+			IsAvailable: false, //NB isAvaliable is deafult false
 		}
-		listOfElevators[i-1] = Status
+		listOfElevators[i] = Status
 	}
-	
 	return listOfElevators
 }
 
+// updates OrderList and CabOrders based on button presses
+func updateOrderListButton(btnEvent messages.ButtonEvent_message, thisElevator *ElevatorStatus) {
+	if btnEvent.Button == messages.BT_Cab {
+		thisElevator.CabOrders[btnEvent.Floor] = true
 
-
-//updates your orderList
-
-func updateOrderListButton(btnEvent elevio.ButtonEvent, status *ElevatorStatus) {	
-	if btnEvent.Button == elevio.BT_Cab {
-		status.cabOrder[btnEvent.Floor-1] = true
-	} else {
+	} else { //TODO remove placeInList or look at OrderList's structure
 		placeInList := 0
-		if btnEvent.Button == elevio.BT_HallUp{
-			placeInList = btnEvent.Floor - 1
+		if btnEvent.Button == messages.BT_HallUp {
+			placeInList = btnEvent.Floor
 		} else {
-			placeInList = config.NumElevators + btnEvent.Floor - 2
-		}	
-		if status.orderList[placeInList].hasOrder == false {
-			fmt.Println("im here")
-			status.orderList[placeInList].hasOrder = true
+			placeInList = config.NumElevators + btnEvent.Floor - 1
+		}
+		if thisElevator.OrderList[placeInList].HasOrder == false {
+			thisElevator.OrderList[placeInList].HasOrder = true
+			thisElevator.OrderList[placeInList].VersionNum += 1
 		}
 	}
 }
 
 //Updates the information list with the incoming update
-func updateOtherElev(incomingStatus ElevatorStatus, list *[config.NumElevators]ElevatorStatus)  {
-	list[incomingStatus.ID-1] = incomingStatus    //accountign for zero indexing
+func updateOtherElev(incomingStatus ElevatorStatus, list *[config.NumElevators]ElevatorStatus) {
+	list[incomingStatus.ID] = incomingStatus //accountign for zero indexing
 }
-func updateElevatorStatusDoor(value bool,list *[config.NumElevators]ElevatorStatus){
-	list[config.ID-1].doorOpen = value
+func updateElevatorStatusDoor(value bool, list *[config.NumElevators]ElevatorStatus) {
+	list[config.ID].DoorOpen = value
 }
-func updateElevatorStatusFloor(pos int,list *[config.NumElevators]ElevatorStatus){
-	list[config.ID-1].pos = pos
+func updateElevatorStatusFloor(pos int, list *[config.NumElevators]ElevatorStatus) {
+	list[config.ID].Pos = pos
 }
 
-func costFunction(num int, list *[config.NumElevators]ElevatorStatus){
-	curOrder := list[config.ID-1].orderList[num]
-	for i := 0; i < config.NumElevators; i++{//i is already 0 indexed
+func costFunction(num int, list *[config.NumElevators]ElevatorStatus) {
+	curOrder := list[config.ID].OrderList[num]
+	for i := 0; i < config.NumElevators; i++ { //i is already 0 indexed
 		elevator := list[i]
 		cost := 0
-		if !elevator.isAvailable || !elevator.isOnline{
-			cost += 1000
+		if !elevator.IsAvailable || !elevator.IsOnline {
+			print(i, "  ", elevator.IsAvailable, "   ", elevator.IsOnline)
+			cost += 2000
+
 		}
 
-		// for loop checking if the elevator has a cabOrder
-		for j := 0; j < config.NumFloors; j++{
-			if elevator.cabOrder[j] == true{
+		// for loop checking if the elevator has a CabOrders
+		for j := 0; j < config.NumFloors; j++ { //organize into function
+			if elevator.CabOrders[j] == true {
 				cost += 1000
 				break
 			}
 		}
-		
-		floorsAway:= curOrder.floor - list[i].pos
-		if floorsAway < 0 {                         // takeing abs of floorsAway
-			floorsAway = - floorsAway
-		} 
-		cost += floorsAway                                   
-		timeWaited := time.Now().Sub(curOrder.timeStamp)
-		//larger than 1 min
-		if timeWaited > time.Duration(60000000000){
-			cost += -1
-		}
-		//larger than 3 min
-		if timeWaited > time.Duration(180000000000){
-			cost += -1
-		}
-		//fmt.Println(cost)
-		list[config.ID-1].orderList[num].costs[i] = cost
-	}
+		cost += waitingTimePenalty(curOrder)
+		cost += distanceFromOrder(list[i].Pos, curOrder.Floor)
 
+		list[config.ID].OrderList[num].Costs[i] = cost
+	}
 }
 
+func waitingTimePenalty(curOrder HallOrder) int {
+	extraCost := 0
+	timeWaited := time.Now().Sub(curOrder.TimeStamp) //organize into function
+	//larger than 1 min
+	if timeWaited > time.Duration(time.Minute*1) {
+		extraCost += -1
+	}
+	//larger than 3 min
+	if timeWaited > time.Duration(time.Minute*3) {
+		extraCost += -1
+	}
+	return extraCost
+}
 
-func pickOrder(list *[config.NumElevators]ElevatorStatus) int {
+func distanceFromOrder(elevatorFloor int, goingToFloor int) int {
+	floorsAway := elevatorFloor - goingToFloor
+	if floorsAway < 0 { // takeing abs of floorsAway
+		floorsAway = -floorsAway
+	}
+	return floorsAway
+}
 
+func goToFloor(list *[config.NumElevators]ElevatorStatus) int {
 
-	for i := 0; i < len(list[config.ID-1].orderList); i++{
-		if list[config.ID-1].orderList[i].hasOrder {
-			costFunction(i,list)
+	for i := 0; i < len(list[config.ID].OrderList); i++ {
+		if list[config.ID].OrderList[i].HasOrder {
+			costFunction(i, list)
 		}
 	}
-	pickedOrder := 0
+	pickedOrder := -1
 
+	//	checking if the elevator has any cabOrders and if assigning that ass the goToFloor
+	shortestCabDistance := config.NumFloors * 10 // random variable larger than config.numfloors
+	for j := 0; j < config.NumFloors; j++ {
+		if list[config.ID].CabOrders[j] == true {
+			curCabDistance := distanceFromOrder(list[config.ID].Pos, j)
+			if curCabDistance < shortestCabDistance {
+				pickedOrder = j
+			}
+		}
+	}
+	// if there is an cab order return that as going to floor
+	if pickedOrder != -1 {
+		return pickedOrder
+	}
 	// Pick the order where you have the lowest cost
-	for i := 0; i < len(list[config.ID-1].orderList); i++{
-		if list[config.ID-1].orderList[i].hasOrder {
 
-			isTaken := 0
-			for j, num := range list[config.ID-1].orderList[i].costs{
-				lowestCost := 500
-				if num < lowestCost{
-					isTaken = j + 1
-				}
-			if isTaken > 0{
-				list[isTaken-1].isAvailable = false
-				if isTaken-1 == config.ID-1{
-				pickedOrder = list[config.ID-1].orderList[i].floor
+	lowestCost := 500
+	for i := 0; i < len(list[config.ID].OrderList); i++ {
+		isTakenID := 0
+		if list[config.ID].OrderList[i].HasOrder {
+			for j, cost := range list[config.ID].OrderList[i].Costs {
+				if cost <= lowestCost {
+					isTakenID = j + 1
+					lowestCost = cost
 				}
 			}
 
-			}		
+			if isTakenID > 0 {
+				if isTakenID-1 == config.ID {
+					pickedOrder = list[config.ID].OrderList[i].Floor
+				}
+			}
 		}
 	}
-
-	return pickedOrder    //return the floor that the elevator should go to
+	return pickedOrder //return the floor that the elevator should go
 }
-
-
 
 func updateOrderListOther(incomingStatus ElevatorStatus, list *[config.NumElevators]ElevatorStatus) {
 
-	for i := 0; i < len(list[config.ID-1].orderList); i++{
+	for i := 0; i < len(list[config.ID].OrderList); i++ {
 
 		// the first if sentences checks for faiure is the version controll
-		if incomingStatus.orderList[i].versionNum == list[config.ID-1].orderList[i].versionNum && incomingStatus.orderList[i].hasOrder != list[config.ID-1].orderList[i].hasOrder {
+		if incomingStatus.OrderList[i].VersionNum == list[config.ID].OrderList[i].VersionNum && incomingStatus.OrderList[i].HasOrder != list[config.ID].OrderList[i].HasOrder {
 			fmt.Println("There is smoething worng with the version controll of the order system")
-			list[config.ID-1].orderList[i].hasOrder = true
-			list[config.ID-1].orderList[i].versionNum += 1
+			list[config.ID].OrderList[i].HasOrder = true
+			list[config.ID].OrderList[i].VersionNum += 1
 		}
 		// this if statement checks if the order should be updated and updates it
-		if incomingStatus.orderList[i].versionNum > list[config.ID-1].orderList[i].versionNum{
-			list[config.ID-1].orderList[i].hasOrder = incomingStatus.orderList[i].hasOrder
-			list[config.ID-1].orderList[i].versionNum = incomingStatus.orderList[i].versionNum
+		if incomingStatus.OrderList[i].VersionNum > list[config.ID].OrderList[i].VersionNum {
+			list[config.ID].OrderList[i].HasOrder = incomingStatus.OrderList[i].HasOrder
+			list[config.ID].OrderList[i].VersionNum = incomingStatus.OrderList[i].VersionNum
 		}
 	}
 }
-func updateOrderListCompleted(list *[config.NumElevators]ElevatorStatus){
-	curFloor := list[config.ID-1].pos
+func updateOrderListCompleted(list *[config.NumElevators]ElevatorStatus) {
+	curFloor := list[config.ID].Pos
 
-	for i := 0; i < len(list[config.ID-1].orderList); i++{
-		if list[config.ID-1].orderList[i].hasOrder && list[config.ID-1].orderList[i].floor == curFloor{
-			list[config.ID-1].orderList[i].hasOrder = false
-			break
+	// checks if the elevator has a cab call for the current floor
+	if list[config.ID].CabOrders[curFloor] == true && list[config.ID].DoorOpen == true {
+		list[config.ID].CabOrders[curFloor] = false
+
+	}
+
+	//Note: this foorloop is here beacuse you have to check both up and down for the same floor, which are stored in diffrent paces in the list
+	// TODO: remove this foor loop
+	for i := 0; i < len(list[config.ID].OrderList); i++ {
+
+		//checks if ther is a hall call at the current floor
+		if list[config.ID].OrderList[i].HasOrder && list[config.ID].OrderList[i].Floor == curFloor && list[config.ID].DoorOpen == true {
+			list[config.ID].OrderList[i].HasOrder = false
+			list[config.ID].OrderList[i].Costs = [config.NumElevators]int{0}
+			list[config.ID].OrderList[i].VersionNum += 1
 		}
 	}
 }
 
-func sendOutStatus(channel chan<- ElevatorStatus ,list [config.NumElevators]ElevatorStatus){
-	channel <- list[config.ID-1]
+func sendOutStatus(channel chan<- ElevatorStatus, list [config.NumElevators]ElevatorStatus) {
+	channel <- list[config.ID]
 }
-func sendingElevatorToFloor(channel chan<- int, goToFloor int){
+func sendingElevatorToFloor(channel chan<- int, goToFloor int) {
 	channel <- goToFloor
 }
 
-
 /*
 func runOrders("channel for reciving buttonEvemts from elevator", "channel for reciving changes in Door from elevator"
-"channel for reciving changes in current floor from Elevator", "channel for sending "go to floor" (int) too Elevator", 
+"channel for reciving changes in current floor from Elevator", "channel for sending "go to floor" (int) too Elevator",
 "channel for reciving incoming Elevatorstatuses","channel for sending out outgoing Elevatorstatuses" ) {
 */
 
-func runOrders(button_press <- chan elevio.ButtonEvent,
-	 received_elevator_update <- chan ElevatorStatus,
-	 new_floor <- chan int, 
-	 door_status <- chan bool,
-	 send_status chan <- ElevatorStatus,
-	 go_to_floor chan <- int){
-	
+func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator communiaction
+	//received_elevator_update <- chan ElevatorStatus,    //Network communication
+	new_floor <-chan int, //Elevator communiaction
+	door_status <-chan bool, //Elevator communiaction
+	//send_status chan <- ElevatorStatus, //Network communication
+	go_to_floor chan<- int, //Elevator communiaction
+	askElevatorForUpdate chan<- bool) {
+
+	fmt.Println("Order module initializing....")
 	allElevators := initAllElevatorStatuses()
-	allElevators[config.ID-1].isOnline = true
-	allElevators[config.ID-1].isAvailable = true
+	allElevators[config.ID].IsOnline = true
+	allElevators[config.ID].IsAvailable = true
+	//time.Sleep(500000000)
+	askElevatorForUpdate <- true
+	initFloor := <-new_floor
+	initDoor := <-door_status
 
+	allElevators[config.ID].Pos = initFloor
+	allElevators[config.ID].DoorOpen = initDoor
+	assignedFloor := -1
 	for {
-		select{
-		case buttonEvent := <- button_press:
-			updateOrderListButton(buttonEvent, &allElevators[config.ID-1])
-			go sendOutStatus(send_status, allElevators)
-		
-		case elevatorStatus := <- received_elevator_update: // new update
-			// update own orderlist and otherElev with the incomming elevatorStatus
-			updateOtherElev(elevatorStatus, &allElevators)
-			updateOrderListOther(elevatorStatus, &allElevators)
+		select {
+		case buttonEvent := <-button_press:
+			updateOrderListButton(buttonEvent, &allElevators[config.ID])
+			updateOrderListCompleted(&allElevators)
+			//go sendOutStatus(send_status, allElevators)
 
-		case floor := <- new_floor:
+		/*
+			case elevatorStatus := <-received_elevator_update: // new update
+				// update own orderlist and otherElev with the incomming elevatorStatus         COMMENTED OUT BEACUSE OF TESTING WITHOUT NETWORK MODULE
+				updateOtherElev(elevatorStatus, &allElevators)
+				updateOrderListOther(elevatorStatus, &allElevators)
+		*/
+
+		case floor := <-new_floor:
 			updateElevatorStatusFloor(floor, &allElevators)
-			go sendOutStatus(send_status, allElevators)
-	
-		case isOpen := <-door_status: //recives a bool value
+			updateOrderListCompleted(&allElevators)
+			//go sendOutStatus(send_status, allElevators)
+
+		case isOpen := <-door_status:
+			if isOpen == true {
+				time.Sleep(time.Second * 3)
+			} //recives a bool value
 			updateElevatorStatusDoor(isOpen, &allElevators)
-			if(isOpen == true){
+			if isOpen == true {
 				updateOrderListCompleted(&allElevators)
 			}
-			go sendOutStatus(send_status, allElevators)
+			//go sendOutStatus(send_status, allElevators)
 
 		}
-		
-		goTo := pickOrder(&allElevators)
-		fmt.Println(goTo) 
-		go sendingElevatorToFloor(go_to_floor, goTo)
-		printElevatorStatus(allElevators[config.ID-1]) 
-	}                                                                                                                                                                                                              
-}
-
-
-
-
-
-// Functions for printing out the Elevator staus and OrderList
-func printOrderList(list [config.NumFloors*2-2]order){
-	fmt.Println("This is the elevators orderlist")
-	for i := 0; i < len(list); i++ {
-		fmt.Println("Floor: ", list[i].floor, " |direction: ", list[i].direction, " |Order: ",list[i].hasOrder, " |Version", list[i].versionNum)
-		fmt.Println("Costs", list[i].costs,"| time", list[i].timeStamp)
+		allElevators[config.ID].IsAvailable = true
+		newAssignedFloor := goToFloor(&allElevators)
+		if newAssignedFloor != -1 && assignedFloor != newAssignedFloor {
+			assignedFloor = newAssignedFloor
+			fmt.Println("Sending out order:", assignedFloor)
+			go sendingElevatorToFloor(go_to_floor, assignedFloor)
+			allElevators[config.ID].IsAvailable = false
+			//go sendOutStatus(send_status, allElevators)
+		}
+		printElevatorStatus(allElevators[config.ID])
 	}
 }
 
-func printElevatorStatus(status ElevatorStatus){
-	fmt.Println("ID: ", status.ID, " |Currentfloor: ", status.pos, " |going: ", status.dir, " |cabOrder ",status.cabOrder)
-	printOrderList(status.orderList)
+// Functions for printing out the Elevator staus and OrderList
+func printOrderList(list [config.NumFloors*2 - 2]HallOrder) {
+	for i := 0; i < len(list); i++ {
+		fmt.Println("Floor: ", list[i].Floor, " |direction: ", list[i].Direction, " |Order: ", list[i].HasOrder, " |Version", list[i].VersionNum, "Costs", list[i].Costs)
+	}
+}
 
+func printElevatorStatus(status ElevatorStatus) {
+	fmt.Println("ID: ", status.ID, " |Currentfloor: ", status.Pos, "|CabOrders ", status.CabOrders, "| Door open: ", status.DoorOpen, "|avaliable: ", status.IsAvailable, status.IsOnline)
+	printOrderList(status.OrderList)
+	fmt.Println("-----------------------------------------------")
+}
+
+func returnOrder() {
+	// Dummy function to test elevatorController
 }

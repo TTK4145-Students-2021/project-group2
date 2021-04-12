@@ -1,4 +1,4 @@
-package elevio
+package elevator
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 func TestElevatorController(t *testing.T) {
 
 	// Setup all the channels we need
-	elev_available := make(chan bool)
+	elev_available := make(chan bool) // Door_open*
 	current_floor := make(chan int)
 	button_action := make(chan ButtonEvent)
 	order := make(chan int)

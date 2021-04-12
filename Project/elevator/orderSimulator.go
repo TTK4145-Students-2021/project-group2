@@ -1,13 +1,13 @@
-package elevio
+package elevator
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"sync"
 	"time"
 
 	"../config"
+	"../messages"
 )
 
 // ElevatorStatus keeps a local track of the status of each elevator
@@ -26,7 +26,7 @@ type ElevatorStatus struct {
 type OrderChannels struct {
 	elev_available <-chan bool
 	current_floor  <-chan int
-	button_event   <-chan ButtonEvent
+	button_event   <-chan messages.ButtonType_message
 	send_order     chan<- int
 	order_response <-chan error
 }
@@ -83,29 +83,31 @@ func OrderSimulator(chans *OrderChannels, status *ElevatorStatus) error {
 	// TODO: Make all goroutines properly stoppable
 
 	for {
-		select {
+		/*
+			select {
 
-		case a := <-chans.button_event:
-			log.Println("Button event received")
+			case a := <-chans.button_event:
+				log.Println("Button event received")
 
-			switch a.Button {
-			case BT_HallDown:
-				err := orderList.addHallOrder(a)
-				if err != nil {
-					fmt.Println("Hall order already exists")
-				}
-			case BT_HallUp:
-				err := orderList.addHallOrder(a)
-				if err != nil {
-					fmt.Println("Hall order already exists")
-				}
-			case BT_Cab:
-				err := orderList.addCabOrder(a)
-				if err != nil {
-					fmt.Println("Cab order already exists")
+				switch a.Button {
+				case BT_HallDown:
+					err := orderList.addHallOrder(a)
+					if err != nil {
+						fmt.Println("Hall order already exists")
+					}
+				case BT_HallUp:
+					err := orderList.addHallOrder(a)
+					if err != nil {
+						fmt.Println("Hall order already exists")
+					}
+				case BT_Cab:
+					err := orderList.addCabOrder(a)
+					if err != nil {
+						fmt.Println("Cab order already exists")
+					}
 				}
 			}
-		}
+		*/
 	}
 }
 

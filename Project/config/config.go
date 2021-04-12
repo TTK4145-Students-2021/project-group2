@@ -22,6 +22,3 @@ const PeersPort int = 54321
 const BcastIntervall time.Duration = 1000 * time.Millisecond
 
 var SimPort string = "15657"
-
-
-
