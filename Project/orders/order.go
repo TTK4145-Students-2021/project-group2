@@ -11,7 +11,7 @@ import (
 
 // assumes buttonEvent as input
 // bcast elevID, targetFloor, dir
-
+/*
 type HallOrder struct {
 	HasOrder   bool
 	Floor      int
@@ -31,6 +31,10 @@ type ElevatorStatus struct {
 	CabOrders   [config.NumFloors]bool
 	IsAvailable bool
 }
+*/
+type HallOrder = messages.HallOrder
+type ElevatorStatus = messages.ElevatorStatus
+
 
 func initOrderList() [config.NumFloors*2 - 2]HallOrder {
 	OrderList := [config.NumFloors*2 - 2]HallOrder{}
@@ -261,10 +265,10 @@ func runOrders("channel for reciving buttonEvemts from elevator", "channel for r
 */
 
 func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator communiaction
-	//received_elevator_update <- chan ElevatorStatus,    //Network communication
+	received_elevator_update <- chan ElevatorStatus,    //Network communication
 	new_floor <-chan int, //Elevator communiaction
 	door_status <-chan bool, //Elevator communiaction
-	//send_status chan <- ElevatorStatus, //Network communication
+	send_status chan <- ElevatorStatus, //Network communication
 	go_to_floor chan<- int, //Elevator communiaction
 	askElevatorForUpdate chan<- bool) {
 
@@ -285,19 +289,19 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 		case buttonEvent := <-button_press:
 			updateOrderListButton(buttonEvent, &allElevators[config.ID])
 			updateOrderListCompleted(&allElevators)
-			//go sendOutStatus(send_status, allElevators)
+			go sendOutStatus(send_status, allElevators)
 
-		/*
+		
 			case elevatorStatus := <-received_elevator_update: // new update
 				// update own orderlist and otherElev with the incomming elevatorStatus         COMMENTED OUT BEACUSE OF TESTING WITHOUT NETWORK MODULE
 				updateOtherElev(elevatorStatus, &allElevators)
 				updateOrderListOther(elevatorStatus, &allElevators)
-		*/
+		
 
 		case floor := <-new_floor:
 			updateElevatorStatusFloor(floor, &allElevators)
 			updateOrderListCompleted(&allElevators)
-			//go sendOutStatus(send_status, allElevators)
+			go sendOutStatus(send_status, allElevators)
 
 		case isOpen := <-door_status:
 			if isOpen == true {
@@ -307,7 +311,7 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 			if isOpen == true {
 				updateOrderListCompleted(&allElevators)
 			}
-			//go sendOutStatus(send_status, allElevators)
+			go sendOutStatus(send_status, allElevators)
 
 		}
 		allElevators[config.ID].IsAvailable = true
