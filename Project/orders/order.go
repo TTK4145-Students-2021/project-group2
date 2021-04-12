@@ -32,17 +32,16 @@ type ElevatorStatus struct {
 	IsAvailable bool
 }
 */
-type HallOrder = messages.HallOrder
-type ElevatorStatus = messages.ElevatorStatus
+//type HallOrder = messages.HallOrder
+//type ElevatorStatus = messages.ElevatorStatus
 
-
-func initOrderList() [config.NumFloors*2 - 2]HallOrder {
-	OrderList := [config.NumFloors*2 - 2]HallOrder{}
+func initOrderList() [config.NumFloors*2 - 2]messages.HallOrder {
+	OrderList := [config.NumFloors*2 - 2]messages.HallOrder{}
 
 	// initalizing HallUp
 
 	for i := 0; i < (config.NumFloors - 1); i++ {
-		OrderList[i] = HallOrder{
+		OrderList[i] = messages.HallOrder{
 			HasOrder:   false,
 			Floor:      i,
 			Direction:  0, //up = 0, down = 1
@@ -54,7 +53,7 @@ func initOrderList() [config.NumFloors*2 - 2]HallOrder {
 
 	// initalizing HallDown
 	for i := config.NumFloors - 1; i < (config.NumFloors*2 - 2); i++ {
-		OrderList[i] = HallOrder{
+		OrderList[i] = messages.HallOrder{
 			HasOrder:   false,
 			Floor:      i + 2 - config.NumFloors,
 			Direction:  1, //up = 0, down = 1
@@ -66,15 +65,15 @@ func initOrderList() [config.NumFloors*2 - 2]HallOrder {
 	return OrderList
 }
 
-func initAllElevatorStatuses() [config.NumElevators]ElevatorStatus {
+func initAllElevatorStatuses() [config.NumElevators]messages.ElevatorStatus {
 
 	CabOrders := [config.NumFloors]bool{false}
 	OrderList := initOrderList()
 
-	listOfElevators := [config.NumElevators]ElevatorStatus{}
+	listOfElevators := [config.NumElevators]messages.ElevatorStatus{}
 
 	for i := 0; i < (config.NumElevators); i++ {
-		Status := ElevatorStatus{
+		Status := messages.ElevatorStatus{
 			ID:          i,
 			Pos:         1,
 			OrderList:   OrderList,
@@ -90,7 +89,7 @@ func initAllElevatorStatuses() [config.NumElevators]ElevatorStatus {
 }
 
 // updates OrderList and CabOrders based on button presses
-func updateOrderListButton(btnEvent messages.ButtonEvent_message, thisElevator *ElevatorStatus) {
+func updateOrderListButton(btnEvent messages.ButtonEvent_message, thisElevator *messages.ElevatorStatus) {
 	if btnEvent.Button == messages.BT_Cab {
 		thisElevator.CabOrders[btnEvent.Floor] = true
 
@@ -109,17 +108,17 @@ func updateOrderListButton(btnEvent messages.ButtonEvent_message, thisElevator *
 }
 
 //Updates the information list with the incoming update
-func updateOtherElev(incomingStatus ElevatorStatus, list *[config.NumElevators]ElevatorStatus) {
+func updateOtherElev(incomingStatus messages.ElevatorStatus, list *[config.NumElevators]messages.ElevatorStatus) {
 	list[incomingStatus.ID] = incomingStatus //accountign for zero indexing
 }
-func updateElevatorStatusDoor(value bool, list *[config.NumElevators]ElevatorStatus) {
+func updateElevatorStatusDoor(value bool, list *[config.NumElevators]messages.ElevatorStatus) {
 	list[config.ID].DoorOpen = value
 }
-func updateElevatorStatusFloor(pos int, list *[config.NumElevators]ElevatorStatus) {
+func updateElevatorStatusFloor(pos int, list *[config.NumElevators]messages.ElevatorStatus) {
 	list[config.ID].Pos = pos
 }
 
-func costFunction(num int, list *[config.NumElevators]ElevatorStatus) {
+func costFunction(num int, list *[config.NumElevators]messages.ElevatorStatus) {
 	curOrder := list[config.ID].OrderList[num]
 	for i := 0; i < config.NumElevators; i++ { //i is already 0 indexed
 		elevator := list[i]
@@ -144,7 +143,7 @@ func costFunction(num int, list *[config.NumElevators]ElevatorStatus) {
 	}
 }
 
-func waitingTimePenalty(curOrder HallOrder) int {
+func waitingTimePenalty(curOrder messages.HallOrder) int {
 	extraCost := 0
 	timeWaited := time.Now().Sub(curOrder.TimeStamp) //organize into function
 	//larger than 1 min
@@ -166,7 +165,7 @@ func distanceFromOrder(elevatorFloor int, goingToFloor int) int {
 	return floorsAway
 }
 
-func goToFloor(list *[config.NumElevators]ElevatorStatus) int {
+func goToFloor(list *[config.NumElevators]messages.ElevatorStatus) int {
 
 	for i := 0; i < len(list[config.ID].OrderList); i++ {
 		if list[config.ID].OrderList[i].HasOrder {
@@ -212,7 +211,7 @@ func goToFloor(list *[config.NumElevators]ElevatorStatus) int {
 	return pickedOrder //return the floor that the elevator should go
 }
 
-func updateOrderListOther(incomingStatus ElevatorStatus, list *[config.NumElevators]ElevatorStatus) {
+func updateOrderListOther(incomingStatus messages.ElevatorStatus, list *[config.NumElevators]messages.ElevatorStatus) {
 
 	for i := 0; i < len(list[config.ID].OrderList); i++ {
 
@@ -229,7 +228,7 @@ func updateOrderListOther(incomingStatus ElevatorStatus, list *[config.NumElevat
 		}
 	}
 }
-func updateOrderListCompleted(list *[config.NumElevators]ElevatorStatus) {
+func updateOrderListCompleted(list *[config.NumElevators]messages.ElevatorStatus) {
 	curFloor := list[config.ID].Pos
 
 	// checks if the elevator has a cab call for the current floor
@@ -251,7 +250,7 @@ func updateOrderListCompleted(list *[config.NumElevators]ElevatorStatus) {
 	}
 }
 
-func sendOutStatus(channel chan<- ElevatorStatus, list [config.NumElevators]ElevatorStatus) {
+func sendOutStatus(channel chan<- messages.ElevatorStatus, list [config.NumElevators]messages.ElevatorStatus) {
 	channel <- list[config.ID]
 }
 func sendingElevatorToFloor(channel chan<- int, goToFloor int) {
@@ -265,10 +264,10 @@ func runOrders("channel for reciving buttonEvemts from elevator", "channel for r
 */
 
 func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator communiaction
-	received_elevator_update <- chan ElevatorStatus,    //Network communication
+	received_elevator_update <-chan messages.ElevatorStatus, //Network communication
 	new_floor <-chan int, //Elevator communiaction
 	door_status <-chan bool, //Elevator communiaction
-	send_status chan <- ElevatorStatus, //Network communication
+	send_status chan<- messages.ElevatorStatus, //Network communication
 	go_to_floor chan<- int, //Elevator communiaction
 	askElevatorForUpdate chan<- bool) {
 
@@ -287,16 +286,15 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 	for {
 		select {
 		case buttonEvent := <-button_press:
+			fmt.Println("--------Button pressed------")
 			updateOrderListButton(buttonEvent, &allElevators[config.ID])
 			updateOrderListCompleted(&allElevators)
 			go sendOutStatus(send_status, allElevators)
 
-		
-			case elevatorStatus := <-received_elevator_update: // new update
-				// update own orderlist and otherElev with the incomming elevatorStatus         COMMENTED OUT BEACUSE OF TESTING WITHOUT NETWORK MODULE
-				updateOtherElev(elevatorStatus, &allElevators)
-				updateOrderListOther(elevatorStatus, &allElevators)
-		
+		case elevatorStatus := <-received_elevator_update: // new update
+			// update own orderlist and otherElev with the incomming elevatorStatus         COMMENTED OUT BEACUSE OF TESTING WITHOUT NETWORK MODULE
+			updateOtherElev(elevatorStatus, &allElevators)
+			updateOrderListOther(elevatorStatus, &allElevators)
 
 		case floor := <-new_floor:
 			updateElevatorStatusFloor(floor, &allElevators)
@@ -321,20 +319,20 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 			fmt.Println("Sending out order:", assignedFloor)
 			go sendingElevatorToFloor(go_to_floor, assignedFloor)
 			allElevators[config.ID].IsAvailable = false
-			//go sendOutStatus(send_status, allElevators)
+			go sendOutStatus(send_status, allElevators)
 		}
 		printElevatorStatus(allElevators[config.ID])
 	}
 }
 
 // Functions for printing out the Elevator staus and OrderList
-func printOrderList(list [config.NumFloors*2 - 2]HallOrder) {
+func printOrderList(list [config.NumFloors*2 - 2]messages.HallOrder) {
 	for i := 0; i < len(list); i++ {
 		fmt.Println("Floor: ", list[i].Floor, " |direction: ", list[i].Direction, " |Order: ", list[i].HasOrder, " |Version", list[i].VersionNum, "Costs", list[i].Costs)
 	}
 }
 
-func printElevatorStatus(status ElevatorStatus) {
+func printElevatorStatus(status messages.ElevatorStatus) {
 	fmt.Println("ID: ", status.ID, " |Currentfloor: ", status.Pos, "|CabOrders ", status.CabOrders, "| Door open: ", status.DoorOpen, "|avaliable: ", status.IsAvailable, status.IsOnline)
 	printOrderList(status.OrderList)
 	fmt.Println("-----------------------------------------------")

@@ -22,7 +22,6 @@ func Transmitter(port int, chans ...interface{}) {
 		}
 		typeNames[i] = reflect.TypeOf(ch).Elem().String()
 	}
-
 	conn := conn.DialBroadcastUDP(port)
 	addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("255.255.255.255:%d", port))
 	for {
@@ -33,6 +32,7 @@ func Transmitter(port int, chans ...interface{}) {
 			JSON:   jsonstr,
 		})
 		conn.WriteTo(ttj, addr)
+		fmt.Println("-> Send status")
 	}
 }
 
@@ -45,7 +45,7 @@ func Receiver(port int, chans ...interface{}) {
 		chansMap[reflect.TypeOf(ch).Elem().String()] = ch
 	}
 
-	var buf [1024]byte
+	var buf [2048]byte
 	conn := conn.DialBroadcastUDP(port)
 	for {
 		n, _, e := conn.ReadFrom(buf[0:])
@@ -63,6 +63,8 @@ func Receiver(port int, chans ...interface{}) {
 			Chan: reflect.ValueOf(ch),
 			Send: reflect.Indirect(v),
 		}})
+
+		fmt.Println("<- Received status")
 	}
 }
 
