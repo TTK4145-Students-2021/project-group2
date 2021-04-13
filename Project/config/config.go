@@ -4,6 +4,7 @@ package config
 var Port string
 var ID int = 0 //This the first elevator
 const NumFloors int = 4
+const BottomFloor int = 0
 
 const NumElevators int = 3
 
