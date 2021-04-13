@@ -18,7 +18,7 @@ func main() {
 
 	// Setup all the channels we need
 	getElevatorUpdate := make(chan bool)
-	elevAvailable := make(chan bool)                        // Door_open*
+	doorOpen := make(chan bool)                             // Door_open*
 	currentFloor := make(chan int)                          //new  floor
 	buttonAction := make(chan messages.ButtonEvent_message) //pressed button
 	order := make(chan int)                                 // goTo floor
@@ -27,13 +27,13 @@ func main() {
 
 	// Bundle controller channels in a struct
 	ctrChans := elevator.ControllerChannels{
-		Elev_available:         elevAvailable, // TODO: Rename
-		Current_floor:          currentFloor,
-		Redirect_button_action: buttonAction,
-		Receive_order:          order,
-		Respond_order:          orderResponse,
-		ElevatorUpdateRequest:  getElevatorUpdate,
-		ControllerReady:        controllerReady,
+		DoorOpen:              doorOpen,
+		CurrentFloor:          currentFloor,
+		RedirectButtonAction:  buttonAction,
+		ReceiveOrder:          order,
+		RespondOrder:          orderResponse,
+		ElevatorUpdateRequest: getElevatorUpdate,
+		ControllerReady:       controllerReady,
 	}
 
 	controller := elevator.NewController(ctrChans)
@@ -47,7 +47,7 @@ func main() {
 	go orders.RunOrders(buttonAction,
 		//received_elevator_update //<- chan ElevatorStatus,    //Network communication
 		currentFloor,
-		elevAvailable,
+		doorOpen,
 		//send_status chan <- ElevatorStatus, //Network communication
 		order,
 		getElevatorUpdate)
