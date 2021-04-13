@@ -31,8 +31,8 @@ func Transmitter(port int, chans ...interface{}) {
 			TypeId: typeNames[chosen],
 			JSON:   jsonstr,
 		})
+		// fmt.Println("TX: _*_*_*_**_*_*_* TTJ:", ttj)
 		conn.WriteTo(ttj, addr)
-		fmt.Println("-> Send status")
 	}
 }
 
@@ -45,7 +45,7 @@ func Receiver(port int, chans ...interface{}) {
 		chansMap[reflect.TypeOf(ch).Elem().String()] = ch
 	}
 
-	var buf [2048]byte
+	var buf [8192]byte
 	conn := conn.DialBroadcastUDP(port)
 	for {
 		n, _, e := conn.ReadFrom(buf[0:])
@@ -55,6 +55,7 @@ func Receiver(port int, chans ...interface{}) {
 
 		var ttj typeTaggedJSON
 		json.Unmarshal(buf[0:n], &ttj)
+		// fmt.Println("RX: _*_*_*_**_*_*_* TTJ:", ttj)
 		ch := chansMap[ttj.TypeId]
 		v := reflect.New(reflect.TypeOf(ch).Elem())
 		json.Unmarshal(ttj.JSON, v.Interface())
@@ -63,8 +64,6 @@ func Receiver(port int, chans ...interface{}) {
 			Chan: reflect.ValueOf(ch),
 			Send: reflect.Indirect(v),
 		}})
-
-		fmt.Println("<- Received status")
 	}
 }
 

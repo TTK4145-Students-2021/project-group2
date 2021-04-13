@@ -35,18 +35,28 @@ type ElevatorStatus struct {
 //type HallOrder = messages.HallOrder
 //type ElevatorStatus = messages.ElevatorStatus
 
+// type Direction int
+
+// const (
+// 	UP   Direction = 0
+// 	DOWN Direction = 1
+// )
+
 func initOrderList() [config.NumFloors*2 - 2]messages.HallOrder {
 	OrderList := [config.NumFloors*2 - 2]messages.HallOrder{}
 
 	// initalizing HallUp
-
+	initialCosts := [config.NumElevators]int{}
+	for i := 0; i < config.NumElevators; i++ {
+		initialCosts[i] = 10000
+	}
 	for i := 0; i < (config.NumFloors - 1); i++ {
 		OrderList[i] = messages.HallOrder{
 			HasOrder:   false,
 			Floor:      i,
 			Direction:  0, //up = 0, down = 1
 			VersionNum: 0,
-			Costs:      [config.NumElevators]int{},
+			Costs:      initialCosts,
 			TimeStamp:  time.Now(),
 		}
 	}
@@ -58,7 +68,7 @@ func initOrderList() [config.NumFloors*2 - 2]messages.HallOrder {
 			Floor:      i + 2 - config.NumFloors,
 			Direction:  1, //up = 0, down = 1
 			VersionNum: 0,
-			Costs:      [config.NumElevators]int{},
+			Costs:      initialCosts,
 			TimeStamp:  time.Now(),
 		}
 	}
@@ -90,19 +100,16 @@ func initAllElevatorStatuses() [config.NumElevators]messages.ElevatorStatus {
 
 // updates OrderList and CabOrders based on button presses
 func updateOrderListButton(btnEvent messages.ButtonEvent_message, thisElevator *messages.ElevatorStatus) {
+
 	if btnEvent.Button == messages.BT_Cab {
 		thisElevator.CabOrders[btnEvent.Floor] = true
 
 	} else { //TODO remove placeInList or look at OrderList's structure
-		placeInList := 0
-		if btnEvent.Button == messages.BT_HallUp {
-			placeInList = btnEvent.Floor
-		} else {
-			placeInList = config.NumElevators + btnEvent.Floor - 1
-		}
-		if thisElevator.OrderList[placeInList].HasOrder == false {
-			thisElevator.OrderList[placeInList].HasOrder = true
-			thisElevator.OrderList[placeInList].VersionNum += 1
+		idx := floorToOrderListIdx(btnEvent.Floor, btnEvent.Button)
+
+		if thisElevator.OrderList[idx].HasOrder == false {
+			thisElevator.OrderList[idx].HasOrder = true
+			thisElevator.OrderList[idx].VersionNum += 1
 		}
 	}
 }
@@ -121,22 +128,22 @@ func updateElevatorStatusFloor(pos int, list *[config.NumElevators]messages.Elev
 func costFunction(num int, list *[config.NumElevators]messages.ElevatorStatus) {
 	curOrder := list[config.ID].OrderList[num]
 	for i := 0; i < config.NumElevators; i++ { //i is already 0 indexed
+
 		elevator := list[i]
 		cost := 0
+		cost += i
 		if !elevator.IsAvailable || !elevator.IsOnline {
-			print(i, "  ", elevator.IsAvailable, "   ", elevator.IsOnline)
-			cost += 2000
-
+			cost += 4000
 		}
 
 		// for loop checking if the elevator has a CabOrders
 		for j := 0; j < config.NumFloors; j++ { //organize into function
 			if elevator.CabOrders[j] == true {
-				cost += 1000
+				cost += 3000
 				break
 			}
 		}
-		cost += waitingTimePenalty(curOrder)
+		//cost += waitingTimePenalty(curOrder)
 		cost += distanceFromOrder(list[i].Pos, curOrder.Floor)
 
 		list[config.ID].OrderList[num].Costs[i] = cost
@@ -148,11 +155,11 @@ func waitingTimePenalty(curOrder messages.HallOrder) int {
 	timeWaited := time.Now().Sub(curOrder.TimeStamp) //organize into function
 	//larger than 1 min
 	if timeWaited > time.Duration(time.Minute*1) {
-		extraCost += -1
+		extraCost += -15
 	}
 	//larger than 3 min
 	if timeWaited > time.Duration(time.Minute*3) {
-		extraCost += -1
+		extraCost += -45
 	}
 	return extraCost
 }
@@ -162,25 +169,29 @@ func distanceFromOrder(elevatorFloor int, goingToFloor int) int {
 	if floorsAway < 0 { // takeing abs of floorsAway
 		floorsAway = -floorsAway
 	}
-	return floorsAway
+	return floorsAway * 10
 }
 
 func goToFloor(list *[config.NumElevators]messages.ElevatorStatus) int {
-
+	// runs through the costFunction for all true orders
 	for i := 0; i < len(list[config.ID].OrderList); i++ {
-		if list[config.ID].OrderList[i].HasOrder {
+		if list[config.ID].OrderList[i].HasOrder { // TODO: rename list
 			costFunction(i, list)
+		} else {
+			for j := 0; j < config.NumElevators; j++ {
+				list[config.ID].OrderList[i].Costs[j] = 10000
+			}
 		}
 	}
 	pickedOrder := -1
 
 	//	checking if the elevator has any cabOrders and if assigning that ass the goToFloor
 	shortestCabDistance := config.NumFloors * 10 // random variable larger than config.numfloors
-	for j := 0; j < config.NumFloors; j++ {
-		if list[config.ID].CabOrders[j] == true {
-			curCabDistance := distanceFromOrder(list[config.ID].Pos, j)
+	for floor := 0; floor < config.NumFloors; floor++ {
+		if list[config.ID].CabOrders[floor] == true {
+			curCabDistance := distanceFromOrder(list[config.ID].Pos, floor)
 			if curCabDistance < shortestCabDistance {
-				pickedOrder = j
+				pickedOrder = floor
 			}
 		}
 	}
@@ -190,25 +201,70 @@ func goToFloor(list *[config.NumElevators]messages.ElevatorStatus) int {
 	}
 	// Pick the order where you have the lowest cost
 
+	costMatrix := make([][config.NumElevators]int, config.NumFloors*2-2)
+	for i := range costMatrix {
+		costMatrix[i] = list[config.ID].OrderList[i].Costs
+	}
 	lowestCost := 500
-	for i := 0; i < len(list[config.ID].OrderList); i++ {
-		isTakenID := 0
-		if list[config.ID].OrderList[i].HasOrder {
-			for j, cost := range list[config.ID].OrderList[i].Costs {
-				if cost <= lowestCost {
-					isTakenID = j + 1
-					lowestCost = cost
-				}
-			}
+	fmt.Println(costMatrix)
 
-			if isTakenID > 0 {
-				if isTakenID-1 == config.ID {
-					pickedOrder = list[config.ID].OrderList[i].Floor
-				}
+	for i := 0; i < config.NumElevators; i++ {
+
+		orderIdx, ID := minumumRowCol(costMatrix)
+		cost := costMatrix[orderIdx][ID]
+		if ID == config.ID && cost < lowestCost && list[config.ID].OrderList[orderIdx].HasOrder {
+			return orderListIdxToFloor(orderIdx)
+		} else {
+			for i := range list[config.ID].OrderList {
+				costMatrix[i][ID] = 10000
+			}
+			for i := 0; i < config.NumElevators; i++ {
+				costMatrix[orderIdx][i] = 10000
 			}
 		}
 	}
 	return pickedOrder //return the floor that the elevator should go
+}
+
+func orderListIdxToFloor(idx int) int {
+	if idx < config.NumFloors-1 {
+		return idx
+	} else {
+		return idx - config.NumFloors + 2
+	}
+}
+
+func floorToOrderListIdx(floor int, dir messages.ButtonType_message) int {
+	if dir == messages.BT_HallUp {
+		return floor
+	} else {
+		return floor + config.NumFloors - 2
+	}
+}
+
+func minumumRowCol(list [][config.NumElevators]int) (int, int) {
+	min := 9999999999999
+	minRowIndex := -1
+	minColIndex := -1
+	for rowIndex, row := range list {
+		for colIndex, col := range row {
+			if col < min {
+				min = col
+				minRowIndex = rowIndex
+				minColIndex = colIndex
+			}
+		}
+	}
+	return minRowIndex, minColIndex
+}
+
+func ifXinSliceInt(x int, slice []int) bool {
+	for _, j := range slice {
+		if x == j {
+			return true
+		}
+	}
+	return false
 }
 
 func updateOrderListOther(incomingStatus messages.ElevatorStatus, list *[config.NumElevators]messages.ElevatorStatus) {
@@ -228,6 +284,7 @@ func updateOrderListOther(incomingStatus messages.ElevatorStatus, list *[config.
 		}
 	}
 }
+
 func updateOrderListCompleted(list *[config.NumElevators]messages.ElevatorStatus) {
 	curFloor := list[config.ID].Pos
 
@@ -244,24 +301,26 @@ func updateOrderListCompleted(list *[config.NumElevators]messages.ElevatorStatus
 		//checks if ther is a hall call at the current floor
 		if list[config.ID].OrderList[i].HasOrder && list[config.ID].OrderList[i].Floor == curFloor && list[config.ID].DoorOpen == true {
 			list[config.ID].OrderList[i].HasOrder = false
-			list[config.ID].OrderList[i].Costs = [config.NumElevators]int{0}
+			list[config.ID].OrderList[i].Costs = [config.NumElevators]int{10000}
 			list[config.ID].OrderList[i].VersionNum += 1
 		}
 	}
 }
 
-func sendOutStatus(channel chan<- messages.ElevatorStatus, list [config.NumElevators]messages.ElevatorStatus) {
-	channel <- list[config.ID]
+func sendOutStatus(channel chan<- messages.ElevatorStatus, status messages.ElevatorStatus) {
+	channel <- status
 }
 func sendingElevatorToFloor(channel chan<- int, goToFloor int) {
 	channel <- goToFloor
 }
 
-/*
-func runOrders("channel for reciving buttonEvemts from elevator", "channel for reciving changes in Door from elevator"
-"channel for reciving changes in current floor from Elevator", "channel for sending "go to floor" (int) too Elevator",
-"channel for reciving incoming Elevatorstatuses","channel for sending out outgoing Elevatorstatuses" ) {
-*/
+func contSend(channel chan<- messages.ElevatorStatus, list *[config.NumElevators]messages.ElevatorStatus) {
+	for {
+		status := *list
+		go sendOutStatus(channel, status[config.ID])
+		time.Sleep(config.BcastIntervall)
+	}
+}
 
 func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator communiaction
 	received_elevator_update <-chan messages.ElevatorStatus, //Network communication
@@ -275,7 +334,6 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 	allElevators := initAllElevatorStatuses()
 	allElevators[config.ID].IsOnline = true
 	allElevators[config.ID].IsAvailable = true
-	//time.Sleep(500000000)
 	askElevatorForUpdate <- true
 	initFloor := <-new_floor
 	initDoor := <-door_status
@@ -283,23 +341,34 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 	allElevators[config.ID].Pos = initFloor
 	allElevators[config.ID].DoorOpen = initDoor
 	assignedFloor := -1
+
+	//go contSend(send_status , &allElevators)
+
 	for {
 		select {
 		case buttonEvent := <-button_press:
 			fmt.Println("--------Button pressed------")
 			updateOrderListButton(buttonEvent, &allElevators[config.ID])
 			updateOrderListCompleted(&allElevators)
-			go sendOutStatus(send_status, allElevators)
+			fmt.Println("-> Status sendt: Buttonpress,", buttonEvent.Button)
+			printElevatorStatus(allElevators[config.ID])
+
+			go sendOutStatus(send_status, allElevators[config.ID])
 
 		case elevatorStatus := <-received_elevator_update: // new update
 			// update own orderlist and otherElev with the incomming elevatorStatus         COMMENTED OUT BEACUSE OF TESTING WITHOUT NETWORK MODULE
-			updateOtherElev(elevatorStatus, &allElevators)
-			updateOrderListOther(elevatorStatus, &allElevators)
+
+			if elevatorStatus.ID != config.ID {
+				updateOtherElev(elevatorStatus, &allElevators)
+				updateOrderListOther(elevatorStatus, &allElevators)
+				fmt.Println("<- Recived status")
+			}
 
 		case floor := <-new_floor:
 			updateElevatorStatusFloor(floor, &allElevators)
 			updateOrderListCompleted(&allElevators)
-			go sendOutStatus(send_status, allElevators)
+			go sendOutStatus(send_status, allElevators[config.ID])
+			fmt.Println("-> Status sendt: New floor:", floor)
 
 		case isOpen := <-door_status:
 			if isOpen == true {
@@ -309,19 +378,28 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 			if isOpen == true {
 				updateOrderListCompleted(&allElevators)
 			}
-			go sendOutStatus(send_status, allElevators)
+			go sendOutStatus(send_status, allElevators[config.ID])
+			fmt.Println("-> Status sendt: Door: ", isOpen)
+			/*
+				case <-time.After(config.BcastIntervall):
+					go sendOutStatus(send_status, allElevators)
+			*/
+		}
 
-		}
-		allElevators[config.ID].IsAvailable = true
+		//allElevators[config.ID].IsAvailable = true
 		newAssignedFloor := goToFloor(&allElevators)
-		if newAssignedFloor != -1 && assignedFloor != newAssignedFloor {
-			assignedFloor = newAssignedFloor
-			fmt.Println("Sending out order:", assignedFloor)
-			go sendingElevatorToFloor(go_to_floor, assignedFloor)
-			allElevators[config.ID].IsAvailable = false
-			go sendOutStatus(send_status, allElevators)
-		}
 		printElevatorStatus(allElevators[config.ID])
+
+		if newAssignedFloor != -1 && assignedFloor != newAssignedFloor && allElevators[config.ID].DoorOpen {
+			assignedFloor = newAssignedFloor
+			//fmt.Println("Sending out order:", assignedFloor)
+			go sendingElevatorToFloor(go_to_floor, assignedFloor)
+			//allElevators[config.ID].IsAvailable = false
+			printElevatorStatus(allElevators[config.ID])
+			go sendOutStatus(send_status, allElevators[config.ID])
+			fmt.Println("-> Status sendt: Go to floor ", assignedFloor)
+		}
+
 	}
 }
 
