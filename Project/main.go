@@ -28,7 +28,7 @@ func main() {
 	controllerReady := make(chan bool)                      // Check when controller is done
 	elevatorStatusTx := make(chan messages.ElevatorStatus)  // Change to orders.ElevatorStatus
 	elevatorStatusRx := make(chan messages.ElevatorStatus)  // Change to orders.ElevatorStatus
-
+//
 	// Bundle controller channels in a struct
 	ctrChans := elevator.ControllerChannels{
 		Elev_available:         elevAvailable, // TODO: Rename
