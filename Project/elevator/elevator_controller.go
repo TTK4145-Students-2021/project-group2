@@ -112,31 +112,7 @@ func (ctr *Controller) Run() error {
 			fmt.Printf("New order received\n")
 			fmt.Printf("Value %v\n", a)
 
-			/*NOTE: When we want to tell our order module that the elevator is unavailable,
-			there are different possible approaches. We can
-			1. Continuously update the order module on a channel
-			2. Let the order module try to send and order and then give it as a response
-			3. Let the order module check it directly itself (GetAvailable or something like that)
-			The implementation below is of case 2, but can be changed!
-			*/
-
-			// MIGHT NOT BE NECESSARY IF THE ORDER MODULE IS CONTINUOUSLY UPDATED
-			//	if !elev.Available {
-			//		channels.Respond_order <- ErrElevUnavailable // Tell the order system error is unavailable
-			//		break
-			//	}
-
 			go elev.GotoFloor(a)
-		/*
-			//err := elev.GotoFloor(targetFloor)
-			err := elev.GotoFloor(a)
-			if err != nil {
-				// TODO: Tell the order module that the order is rejected
-				channels.Respond_order <- ErrExecOrderFailed
-			} else {
-				channels.Respond_order <- nil
-			}
-		*/
 
 		// TODO: Do we need an option to shut down this loop? Probably
 		case <-channels.ElevatorUpdateRequest:

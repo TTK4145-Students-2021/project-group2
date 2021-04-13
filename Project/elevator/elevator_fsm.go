@@ -8,6 +8,11 @@ import (
 	"../config"
 )
 
+//
+//
+//
+//
+//
 // language spec: https://golang.org/ref/spec#Function_literals
 // Framework used: https://venilnoronha.io/a-simple-state-machine-framework-in-go
 
@@ -18,7 +23,7 @@ type StateType string
 type EventType string
 
 const (
-	// States of the elevator
+	// States the elevator can be set to
 	Uninitialized      StateType = "Uninitialized"
 	Initializing       StateType = "Initializing"
 	Moving             StateType = "Moving"
@@ -134,13 +139,11 @@ func (elev *ElevatorMachine) getNextState(event EventType) (StateType, error) {
 			}
 		}
 	}
-	return elev.Current, ErrEventRejected //This is most likely wrong!! //TODO: CHECK THIS!
+	return elev.Current, ErrEventRejected
 }
 
 // SendEvent sends an event to the state machine
 func (elev *ElevatorMachine) SendEvent(event EventType, eventCtx EventContext) error {
-	//elev.mutex.Lock()
-	//defer elev.mutex.Unlock()
 
 	for {
 
@@ -205,7 +208,6 @@ func (a *InitAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Event
 	// Give the elevator all the necessary channels
 	elev.Channels = eventCtx.(*InitContext).Channels
 
-	fmt.Println("Getting floor")
 	switch GetFloor() {
 
 	// If not at floor -> move down to floor
@@ -257,7 +259,7 @@ func (a *MovingAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Eve
 	switch tf := targetFloor; {
 	case tf == elev.CurrentFloor:
 		fmt.Println("Elevator already at destination")
-		return ArriveAtFloor // Simply open doors
+		return ArriveAtFloor
 	case tf < elev.CurrentFloor:
 		fmt.Println("Elevator moving down")
 		dir = MD_Down
@@ -380,14 +382,8 @@ type InitAction struct{}
 // OnObstrAction should wait for the elevator to not be obstructed anymore
 type OnObstrAction struct{}
 
-// MovingDownAction represents the action executed when entering the Moving state
+// MovingAction represents the action executed when entering the Moving state
 type MovingAction struct{}
-
-// MovingDownAction represents the action executed when entering the MovingDown state
-type MovingDownAction struct{}
-
-// MovingUpAction represents the action executed when entering the MovingUp state
-type MovingUpAction struct{}
 
 // AtFloorClosedAction represents the action executed when in this state
 type AtFloorClosedAction struct{}
