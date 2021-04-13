@@ -205,7 +205,6 @@ func (a *InitAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Event
 	// Give the elevator all the necessary channels
 	elev.Channels = eventCtx.(*InitContext).Channels
 
-	fmt.Println("Getting floor")
 	switch GetFloor() {
 
 	// If not at floor -> move down to floor
@@ -380,14 +379,8 @@ type InitAction struct{}
 // OnObstrAction should wait for the elevator to not be obstructed anymore
 type OnObstrAction struct{}
 
-// MovingDownAction represents the action executed when entering the Moving state
+// MovingAction represents the action executed when entering the Moving state
 type MovingAction struct{}
-
-// MovingDownAction represents the action executed when entering the MovingDown state
-type MovingDownAction struct{}
-
-// MovingUpAction represents the action executed when entering the MovingUp state
-type MovingUpAction struct{}
 
 // AtFloorClosedAction represents the action executed when in this state
 type AtFloorClosedAction struct{}
