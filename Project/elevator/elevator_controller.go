@@ -8,11 +8,16 @@ import (
 	"../messages"
 )
 
-/*
-The Elevator Controller works like an extension to an elevator_fsm. It contains channels
-needed for communicating between the elevator and the order-module, and methods for sending
-operations to the elevator_fsm. This way, we conceptually abstract the physical state machine of
-the elvator (the fsm) and the unit trying to perform operations on it.
+/*=============================================================================
+ * @Description:
+ * The Elevator Controller acts as an extension to an ElevatorMachine, working as
+ * a broker between the input buttons, the order module and the physical machine.
+ * It sets up and connects all the necessary communication channels in the way that
+ * is needed for the modules to work together, redirecting inputs and outputs to their
+ * intended destinations.
+ *
+ * @Author: Eldar Sandanger
+/*=============================================================================
 */
 
 const _ctrPollRate = 20 * time.Millisecond
@@ -51,12 +56,10 @@ func (ctr *Controller) Run() error {
 	channels := ctr.Channels
 	elev := ctr.Elev
 
-	// Setup "Button panel" interface
 	drv_buttons := make(chan ButtonEvent)
-
-	// Setup and run elevator machine instance
 	drv_floors := make(chan int)
 	drv_obstr := make(chan bool)
+
 	elevChans := ElevChannels{
 		drv_floors: drv_floors,
 		drv_obstr:  drv_obstr,
@@ -65,16 +68,17 @@ func (ctr *Controller) Run() error {
 	if err != nil {
 		return err
 	}
+
 	SetFloorIndicator(elev.CurrentFloor)
 
-	// Start elevio routines
+	// Start elevator driver routines
 	go PollButtons(drv_buttons)
 	go PollFloorSensor(drv_floors)
 	go PollObstructionSwitch(drv_obstr)
 
-	// Send elevator status to external listener
-	go ctr.PollDoorOpen(elev)
-	go ctr.PollElevFloor(elev)
+	// Start polling routines for updating external listener
+	go ctr.pollDoorOpen(elev)
+	go ctr.pollElevFloor(elev)
 
 	ctr.Channels.ControllerReady <- true
 
@@ -85,37 +89,29 @@ func (ctr *Controller) Run() error {
 			fmt.Println("Button press registered")
 			fmt.Printf("%+v\n", a)
 
+			// Convert to type ButtonEvent_message before sending
+			btm := messages.UNDEFINED
 			switch a.Button {
 			case BT_HallUp:
-				bt := messages.BT_HallUp
-				message := messages.ButtonEvent_message{
-					Floor:  a.Floor,
-					Button: bt,
-				}
-				channels.RedirectButtonAction <- message
+				btm = messages.BT_HallUp
 			case BT_HallDown:
-				bt := messages.BT_HallDown
-				message := messages.ButtonEvent_message{
-					Floor:  a.Floor,
-					Button: bt,
-				}
-				channels.RedirectButtonAction <- message
+				btm = messages.BT_HallDown
 			case BT_Cab:
-				bt := messages.BT_Cab
-				message := messages.ButtonEvent_message{
-					Floor:  a.Floor,
-					Button: bt,
-				}
-				channels.RedirectButtonAction <- message
+				btm = messages.BT_Cab
 			}
+			message := messages.ButtonEvent_message{
+				Floor:  a.Floor,
+				Button: btm,
+			}
+
+			channels.RedirectButtonAction <- message
 
 		case a := <-channels.ReceiveOrder:
 			fmt.Printf("New order received\n")
-			fmt.Printf("Value %v\n", a)
+			fmt.Printf("Target floor: %v\n", a)
 
 			go elev.GotoFloor(a)
 
-		// TODO: Do we need an option to shut down this loop? Probably
 		case <-channels.ElevatorUpdateRequest:
 			channels.CurrentFloor <- elev.CurrentFloor
 			channels.DoorOpen <- elev.Available
@@ -131,11 +127,8 @@ func (ctr *Controller) SendElevatorStatus() {
 	ctr.Channels.CurrentFloor <- ctr.Elev.CurrentFloor
 }
 
-func (ctr *Controller) GetElevator() *ElevatorMachine {
-	return ctr.Elev
-}
-
-func (ctr *Controller) PollDoorOpen(elev *ElevatorMachine) {
+// pollDoorOpen sends update to listener if door opens or closes
+func (ctr *Controller) pollDoorOpen(elev *ElevatorMachine) {
 	prev := elev.Available
 	ctr.Channels.DoorOpen <- prev
 	for {
@@ -149,12 +142,12 @@ func (ctr *Controller) PollDoorOpen(elev *ElevatorMachine) {
 	}
 }
 
-func (ctr *Controller) PollElevFloor(elev *ElevatorMachine) {
+// pollElevFloor sends update to listener if elevator enters new floor
+func (ctr *Controller) pollElevFloor(elev *ElevatorMachine) {
 	prev := elev.CurrentFloor
 	ctr.Channels.CurrentFloor <- prev
 	for {
 		time.Sleep(_ctrPollRate)
-
 		elev.mutex.Lock()
 		v := ctr.Elev.CurrentFloor
 		elev.mutex.Unlock()
@@ -187,7 +180,6 @@ func (elev *ElevatorMachine) Initialize(elevChans ElevChannels) error {
 	return nil
 }
 
-// GotoFloor tells an elevator to mote to targetFloor
 func (elev *ElevatorMachine) GotoFloor(targetFloor int) error {
 
 	fmt.Println("GotoFloor called")

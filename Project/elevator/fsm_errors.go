@@ -19,4 +19,5 @@ var ErrIllegalMoveDown = errors.New("illegal move down, already at bottom")
 // ErrNoStateAction return if there are errors in the State: Action configurations
 var ErrNoStateAction = errors.New("there are no actions in the next state")
 
+// ErrExecOrderFailed returns if an order could not be executed
 var ErrExecOrderFailed = errors.New("order execution failed")

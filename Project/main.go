@@ -18,7 +18,7 @@ func main() {
 
 	// Setup all the channels we need
 	getElevatorUpdate := make(chan bool)
-	doorOpen := make(chan bool)                             // Door_open*
+	doorOpen := make(chan bool)
 	currentFloor := make(chan int)                          //new  floor
 	buttonAction := make(chan messages.ButtonEvent_message) //pressed button
 	order := make(chan int)                                 // goTo floor
@@ -40,10 +40,7 @@ func main() {
 	go controller.Run()
 	<-controllerReady // Check when controller is ready
 
-	//define channels
-
 	fmt.Println("Should start running orders")
-	//elevator.RunElevator("localhost:"+config.Port, config.NumFloors)
 	go orders.RunOrders(buttonAction,
 		//received_elevator_update //<- chan ElevatorStatus,    //Network communication
 		currentFloor,
@@ -54,10 +51,5 @@ func main() {
 
 	for {
 	}
-
-	//newOrder := make(chan elevator.ButtonEvent)
-	//assignedOrder := make(chan elevator.ButtonEvent)
-
-	// TestElevatorMachine() ??
 
 }
