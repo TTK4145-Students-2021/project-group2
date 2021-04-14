@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"../../config"
 	"../conn"
 )
 
@@ -15,7 +16,7 @@ type PeerUpdate struct {
 	Lost  []string
 }
 
-const interval = 100 * time.Millisecond
+// const interval = 1000 * time.Millisecond
 const timeout = 100 * time.Millisecond
 
 func Transmitter(port int, id string) {
@@ -25,7 +26,7 @@ func Transmitter(port int, id string) {
 
 	for {
 		conn.WriteTo([]byte(id), addr)
-		time.Sleep(interval)
+		time.Sleep(config.BcastIntervall)
 	}
 }
 
@@ -40,7 +41,7 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 	for {
 		updated := false
 
-		conn.SetReadDeadline(time.Now().Add(interval))
+		conn.SetReadDeadline(time.Now().Add(config.BcastIntervall))
 		n, _, _ := conn.ReadFrom(buf[0:])
 
 		id := string(buf[:n])

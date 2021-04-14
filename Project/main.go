@@ -1,5 +1,5 @@
 // run main with as follows:
-// go run main.go [port] [elevatorID]
+// go run main.go [SimPort] [elevatorID]
 
 package main
 
@@ -9,11 +9,13 @@ import (
 	"./config"
 	"./elevator"
 	"./messages"
+	"./network/bcast"
 	"./orders"
 )
 
 func main() {
 
+	config.InitConfig()
 	fmt.Println(config.NumFloors, config.NumElevators, config.Port, config.ID)
 
 	// Setup all the channels we need
@@ -24,7 +26,9 @@ func main() {
 	order := make(chan int)                                 // goTo floor
 	orderResponse := make(chan error)                       //TODO: Order response can be a const int instead
 	controllerReady := make(chan bool)                      // Check when controller is done
-
+	elevatorStatusTx := make(chan messages.ElevatorStatus)  // Change to orders.ElevatorStatus
+	elevatorStatusRx := make(chan messages.ElevatorStatus)  // Change to orders.ElevatorStatus
+//
 	// Bundle controller channels in a struct
 	ctrChans := elevator.ControllerChannels{
 		DoorOpen:              doorOpen,
@@ -41,15 +45,16 @@ func main() {
 	<-controllerReady // Check when controller is ready
 
 	fmt.Println("Should start running orders")
-	go orders.RunOrders(buttonAction,
-		//received_elevator_update //<- chan ElevatorStatus,    //Network communication
+
+	go bcast.Transmitter(config.BcastPort, elevatorStatusTx)
+	go bcast.Receiver(config.BcastPort, elevatorStatusRx)
+
+	orders.RunOrders(buttonAction,
+		elevatorStatusRx, //<- chan ElevatorStatus,    //Network communication
 		currentFloor,
-		doorOpen,
-		//send_status chan <- ElevatorStatus, //Network communication
+		elevAvailable,
+		elevatorStatusTx, //Network communication
 		order,
 		getElevatorUpdate)
-
-	for {
-	}
 
 }
