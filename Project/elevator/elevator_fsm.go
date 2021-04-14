@@ -8,13 +8,21 @@ import (
 	"../config"
 )
 
-//
-//
-//
-//
-//
-// language spec: https://golang.org/ref/spec#Function_literals
-// Framework used: https://venilnoronha.io/a-simple-state-machine-framework-in-go
+/*=============================================================================
+ * @Description:
+ * Contains a struct that represents the physical state of the elevator as a
+ * State Machine and operations that can be performed on that struct. The file also contains
+ * functions to handle transitions between states.
+ *
+ * For more information and a detailed explanation on the state machine framework
+ * used in this code, see the package Readme.md
+ *
+ * @Author: Eldar Sandanger
+/*=============================================================================
+*/
+
+const _floorPollRate = time.Millisecond * 20
+const NoFloor int = -1
 
 // StateType is an extensible state type in the elevator
 type StateType string
@@ -38,10 +46,15 @@ const (
 	ArriveAtFloor  EventType = "ArriveAtFloor"
 )
 
-// ElevChannels contain all the channels needed for the elevator to work
-type ElevChannels struct {
-	drv_floors <-chan int
-	drv_obstr  <-chan bool
+// Action represents an action to be executed upon a state transition
+type Action interface {
+	Execute(elev *ElevatorMachine, eventCtx EventContext) EventType
+}
+
+// State binds a state with an action and a set of events it can handle in that given state
+type State struct {
+	Action Action
+	Events Events
 }
 
 // Events represents the mapping of events that can be performed in given states
@@ -50,13 +63,13 @@ type Events map[EventType]StateType
 // States represents a mapping of states and their implementations
 type States map[StateType]State
 
-// State binds a state with an action and a set of events it can handle in that given state
-type State struct {
-	Action Action
-	Events Events
+// ElevChannels contain all the channels needed for the elevator to work
+type ElevChannels struct {
+	drv_floors <-chan int
+	drv_obstr  <-chan bool
 }
 
-// ElevatorMachine represents the elevator itself
+// ElevatorMachine contains all information meeded to represent the physical state
 type ElevatorMachine struct {
 
 	// Track if elevator available
@@ -78,13 +91,10 @@ type ElevatorMachine struct {
 	CurrentFloor int
 
 	// Other relevant floor data
-	TotalFloors int
 	TopFloor    int
 	BottomFloor int
-	AtTop       bool
-	AtBottom    bool
 
-	// Ensures only one event is processed by the machine at a time
+	// Ensures exclusive access to the data contained within the struct
 	mutex sync.Mutex
 }
 
@@ -92,7 +102,9 @@ type ElevatorMachine struct {
 func NewElevatorMachine() *ElevatorMachine {
 	return &ElevatorMachine{
 
-		// This maps all the possible states and events appropriately
+		// This maps all the possible states, actions and events appropriately.
+		// The pattern might seem unfamiliar, but a detailed explanation is provided in this
+		// packages Readme as it is vital for understanding how the code works.
 		States: States{
 
 			Uninitialized: State{
@@ -123,26 +135,17 @@ func NewElevatorMachine() *ElevatorMachine {
 			},
 		},
 
-		Current:   Uninitialized,
-		Available: false,
+		// Other default parameters
+		Current:     Uninitialized,
+		Available:   false,
+		TopFloor:    config.NumFloors - 1,
+		BottomFloor: config.BottomFloor,
 	}
-}
-
-// Return next state for given event, or an error if the event can't be handled in this state
-func (elev *ElevatorMachine) getNextState(event EventType) (StateType, error) {
-
-	// Check if the event is possible in the current state
-	if state, ok := elev.States[elev.Current]; ok {
-		if state.Events != nil {
-			if next, ok := state.Events[event]; ok {
-				return next, nil
-			}
-		}
-	}
-	return elev.Current, ErrEventRejected
 }
 
 // SendEvent sends an event to the state machine
+// Triggering an event can cause a chain of events. This function ensures that every event in the chain
+// is processed until a "NoOp"-event is returned, indicating that there are No Operations left to perform.
 func (elev *ElevatorMachine) SendEvent(event EventType, eventCtx EventContext) error {
 
 	for {
@@ -157,9 +160,10 @@ func (elev *ElevatorMachine) SendEvent(event EventType, eventCtx EventContext) e
 		// Identify the state definition for the next state
 		state, ok := elev.States[nextState]
 		if !ok || state.Action == nil {
-			//Configuration error
-			// If state.Action == nil this implies there are no actions in the next state
-			// This means you have to make one!
+			// Configuration error
+			// If state.Action == nil, this implies there are no actions in the next state
+			// ... this means you have to make one!
+			// If not 'ok', this implies the action returned is not a legal action in the next state
 		}
 
 		// Transition to the next state
@@ -167,15 +171,31 @@ func (elev *ElevatorMachine) SendEvent(event EventType, eventCtx EventContext) e
 		elev.Current = nextState
 		elev.mutex.Unlock()
 
-		// Execute the next states action and loop over if the next state presents a
-		// new action that needs to be performed immediately
+		// Execute the next states action
 		nextEvent := state.Action.Execute(elev, eventCtx)
 		if nextEvent == NoOp {
 			return nil
 		}
+
 		event = nextEvent
+
 	}
 }
+
+// Return next state for given event, or an error if the event is illegal in the current state
+func (elev *ElevatorMachine) getNextState(event EventType) (StateType, error) {
+	if state, ok := elev.States[elev.Current]; ok {
+		if state.Events != nil {
+			if next, ok := state.Events[event]; ok {
+				return next, nil
+			}
+		}
+	}
+	return elev.Current, ErrEventRejected
+}
+
+// EventContext represents the context to be passed to the action implementation
+type EventContext interface{}
 
 // InitContext contains information that needs to passed when initializing elevator
 type InitContext struct {
@@ -196,41 +216,18 @@ func (a *InitAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Event
 	defer elev.mutex.Unlock()
 
 	fmt.Println("Initializing elevator...")
-
-	fmt.Println("Stopping motor")
 	SetMotorDirection(MD_Stop)
-	fmt.Println("Setting door lamp false")
 	SetDoorOpenLamp(false)
-
-	elev.TopFloor = config.NumFloors - 1
-	elev.BottomFloor = 0
 
 	// Give the elevator all the necessary channels
 	elev.Channels = eventCtx.(*InitContext).Channels
 
-	switch GetFloor() {
-
-	// If not at floor -> move down to floor
-	case NoFloor:
-		for GetFloor() == NoFloor {
-			SetMotorDirection(MD_Down)
-			time.Sleep(time.Millisecond * 20) //SHOULD BE POLL_RATE!!
-		}
-		SetMotorDirection(MD_Stop)
-		// TODO: REPAIR THIS LOGIC
-		// It skips the part where it set which floor we're at
-
-	case elev.BottomFloor:
-		elev.AtBottom = true
-		elev.AtTop = false
-	case elev.TopFloor:
-		elev.AtBottom = false
-		elev.AtTop = true
-	default:
-		elev.AtBottom = false
-		elev.AtTop = false
-		// TODO: what to do then?
+	// If not initially at floor -> move down to closest floor
+	for GetFloor() == NoFloor {
+		SetMotorDirection(MD_Down)
+		time.Sleep(_floorPollRate)
 	}
+	SetMotorDirection(MD_Stop)
 
 	elev.CurrentFloor = GetFloor()
 
@@ -254,7 +251,7 @@ func (a *MovingAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Eve
 	fmt.Printf("Target Floor: %v | ", targetFloor)
 	fmt.Printf("Current Floor: %v, \n", elev.CurrentFloor)
 
-	// Decide direction
+	// Decide direction or stop operation if already at target floor
 	var dir MotorDirection
 	switch tf := targetFloor; {
 	case tf == elev.CurrentFloor:
@@ -274,51 +271,39 @@ func (a *MovingAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Eve
 	for {
 		select {
 		// If new floor detected
-		case a := <-elev.Channels.drv_floors:
+		case newFloor := <-elev.Channels.drv_floors:
 
-			SetFloorIndicator(a)
+			SetFloorIndicator(newFloor)
 
-			if a == elev.CurrentFloor {
+			if newFloor == elev.CurrentFloor {
 				// Likely read-error. Do nothing
 				break
 			} else {
 				elev.mutex.Lock()
-				elev.CurrentFloor = a
+				elev.CurrentFloor = newFloor
 				elev.mutex.Unlock()
 			}
 
-			switch a {
+			switch newFloor {
 			case elev.BottomFloor:
-				elev.mutex.Lock()
-				elev.AtTop = false
-				elev.AtBottom = true
-				elev.mutex.Unlock()
 				SetMotorDirection(MD_Stop)
 				fmt.Println("Arrived at ground floor")
 				return ArriveAtFloor
 			case elev.TopFloor:
-				elev.mutex.Lock()
-				elev.AtTop = true
-				elev.AtBottom = false
-				elev.mutex.Unlock()
 				SetMotorDirection(MD_Stop)
 				fmt.Println("Arrived at top floor")
 				return ArriveAtFloor
 			case targetFloor:
 				SetMotorDirection(MD_Stop)
-				fmt.Printf("Arrived at floor %v\n", a)
+				fmt.Printf("Arrived at floor %{newFloor}\n", a)
 				return ArriveAtFloor
 			default:
-				elev.mutex.Lock()
-				elev.AtTop = false
-				elev.AtBottom = false
-				elev.mutex.Unlock()
+				// Do nothing
 			}
 
-		// If obstructed
-		case a := <-elev.Channels.drv_obstr:
-			fmt.Printf("%+v\n", a)
-			if a {
+		// If obstructed status changed
+		case isObstructed := <-elev.Channels.drv_obstr:
+			if isObstructed {
 				fmt.Println("Elevator obstructed!")
 				SetMotorDirection(MD_Stop)
 			} else {
@@ -335,7 +320,6 @@ func (a *MovingAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Eve
 func (a *AtFloorOpenAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
 	elev.mutex.Lock()
 	defer elev.mutex.Unlock()
-	fmt.Println("Elevator set available")
 	SetDoorOpenLamp(true)
 	fmt.Println("Elevator doors open")
 	elev.Available = true
@@ -357,15 +341,6 @@ func waitIfObstructed(elev *ElevatorMachine) {
 			}
 		}
 	}
-}
-
-// EventContext represents the context to be passed to the action implementation
-type EventContext interface{}
-
-// Action represents the action to be executed in a given state
-type Action interface {
-	// Pass an eventContext and receive an event type
-	Execute(elev *ElevatorMachine, eventCtx EventContext) EventType
 }
 
 /*COMMENT ON ACTION STRUCTS:

@@ -9,6 +9,7 @@ import (
 type ButtonType_message int
 
 const (
+	UNDEFINED   ButtonType_message = -1
 	BT_HallUp   ButtonType_message = 0
 	BT_HallDown ButtonType_message = 1
 	BT_Cab      ButtonType_message = 2

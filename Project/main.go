@@ -20,7 +20,7 @@ func main() {
 
 	// Setup all the channels we need
 	getElevatorUpdate := make(chan bool)
-	elevAvailable := make(chan bool)                        // Door_open*
+	doorOpen := make(chan bool)
 	currentFloor := make(chan int)                          //new  floor
 	buttonAction := make(chan messages.ButtonEvent_message) //pressed button
 	order := make(chan int)                                 // goTo floor
@@ -31,23 +31,20 @@ func main() {
 //
 	// Bundle controller channels in a struct
 	ctrChans := elevator.ControllerChannels{
-		Elev_available:         elevAvailable, // TODO: Rename
-		Current_floor:          currentFloor,
-		Redirect_button_action: buttonAction,
-		Receive_order:          order,
-		Respond_order:          orderResponse,
-		ElevatorUpdateRequest:  getElevatorUpdate,
-		ControllerReady:        controllerReady,
+		DoorOpen:              doorOpen,
+		CurrentFloor:          currentFloor,
+		RedirectButtonAction:  buttonAction,
+		ReceiveOrder:          order,
+		RespondOrder:          orderResponse,
+		ElevatorUpdateRequest: getElevatorUpdate,
+		ControllerReady:       controllerReady,
 	}
 
 	controller := elevator.NewController(ctrChans)
 	go controller.Run()
 	<-controllerReady // Check when controller is ready
 
-	//define channels
-
 	fmt.Println("Should start running orders")
-	//elevator.RunElevator("localhost:"+config.Port, config.NumFloors)
 
 	go bcast.Transmitter(config.BcastPort, elevatorStatusTx)
 	go bcast.Receiver(config.BcastPort, elevatorStatusRx)
