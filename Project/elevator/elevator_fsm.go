@@ -295,7 +295,7 @@ func (a *MovingAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Eve
 				return ArriveAtFloor
 			case targetFloor:
 				SetMotorDirection(MD_Stop)
-				fmt.Printf("Arrived at floor %{newFloor}\n", a)
+				fmt.Printf("Arrived at target floor\n", a)
 				return ArriveAtFloor
 			default:
 				// Do nothing
