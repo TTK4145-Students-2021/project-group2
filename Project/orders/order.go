@@ -43,17 +43,16 @@ type ElevatorStatus struct {
 // )
 
 type OrderChannels struct {
-	Button_press               <-chan messages.ButtonEvent_message //Elevator communiaction
-	Received_elevator_update   <-chan messages.ElevatorStatus //Network communication
-	New_floor                  <-chan int //Elevator communiaction
-	Door_status                <-chan bool //Elevator communiaction
-	Send_status                chan<- messages.ElevatorStatus //Network communication
-	Go_to_floor                chan<- int //Elevator communiaction
-	AskElevatorForUpdate       chan<- bool
-	DoorObstructed             <-chan bool
-	UpdateLampMessage          chan<- messages.LampUpdate_message
+	Button_press             <-chan messages.ButtonEvent_message //Elevator communiaction
+	Received_elevator_update <-chan messages.ElevatorStatus      //Network communication
+	New_floor                <-chan int                          //Elevator communiaction
+	Door_status              <-chan bool                         //Elevator communiaction
+	Send_status              chan<- messages.ElevatorStatus      //Network communication
+	Go_to_floor              chan<- int                          //Elevator communiaction
+	AskElevatorForUpdate     chan<- bool
+	DoorObstructed           <-chan bool
+	UpdateLampMessage        chan<- messages.LampUpdate_message
 }
-
 
 func initOrderList() [config.NumFloors*2 - 2]messages.HallOrder {
 	OrderList := [config.NumFloors*2 - 2]messages.HallOrder{}
@@ -97,17 +96,15 @@ func initAllElevatorStatuses() [config.NumElevators]messages.ElevatorStatus {
 
 	for i := 0; i < (config.NumElevators); i++ {
 		Status := messages.ElevatorStatus{
-			ID:          i,
-			Pos:         1,
-			OrderList:   OrderList,
-			Dir:         2,
-			IsOnline:    false, //NB isOline is deafult false
-			DoorOpen:    false,
-			CabOrders:   CabOrders,
-			IsAvailable: false, //NB isAvaliable is deafult false
+			ID:           i,
+			Pos:          1,
+			OrderList:    OrderList,
+			Dir:          2,
+			IsOnline:     false, //NB isOline is deafult false
+			DoorOpen:     false,
+			CabOrders:    CabOrders,
+			IsAvailable:  false, //NB isAvaliable is deafult false
 			IsObstructed: false,
-			Timestamp:   time.Now().Add(-time.Hour),
-
 		}
 		listOfElevators[i] = Status
 	}
@@ -151,9 +148,9 @@ func costFunction(num int, list *[config.NumElevators]messages.ElevatorStatus) {
 		if !elevator.IsAvailable || !elevator.IsOnline {
 			cost += 4000
 		}
-		if elevator.IsObstructed{
+		if elevator.IsObstructed {
 			cost += 100
-		} 
+		}
 
 		// for loop checking if the elevator has a CabOrders
 		for j := 0; j < config.NumFloors; j++ { //organize into function
@@ -330,27 +327,43 @@ func updateOrderListCompleted(list *[config.NumElevators]messages.ElevatorStatus
 	}
 }
 
-func sendOutLightsUpdate(sendLampUpdate chan<- messages.LampUpdate_message, status *messages.ElevatorStatus){
-	for{
-		for _, order := range status.OrderList{
+func sendOutLightsUpdate(sendLampUpdate chan<- messages.LampUpdate_message, status *messages.ElevatorStatus) {
+	for {
+		for _, order := range status.OrderList {
 			light := messages.LampUpdate_message{
-				Floor: 	order.Floor,
+				Floor:  order.Floor,
 				Button: messages.ButtonType_msg(order.Direction), // = 0 up og 1 down
 				Turn:   order.HasOrder,
 			}
 			sendLampUpdate <- light
 			//send light at channel
 		}
-		for i, order := range status.CabOrders{
+		for i, order := range status.CabOrders {
 
 			light := messages.LampUpdate_message{
-				Floor: 	i,
-				Button: messages.BT_Cab,  // = 0 up og 1 down
-				Turn:  	order,
+				Floor:  i,
+				Button: messages.BT_Cab, // = 0 up og 1 down
+				Turn:   order,
 			}
 			sendLampUpdate <- light //send light at channel
 		}
 		time.Sleep(time.Millisecond * 100)
+	}
+}
+
+func checkIfElevatorOffline(allElevators *[config.NumElevators]messages.ElevatorStatus) {
+	for elevID := range allElevators {
+		if time.Since(allElevators[elevID].Timestamp) > config.OfflineTimeout && elevID != config.ID {
+			if allElevators[elevID].IsOnline == true {
+				fmt.Printf("[-] Elevator offline ID: %02d\n", elevID) // For debugging purposes. Detect change in online status
+			}
+			allElevators[elevID].IsOnline = false
+		} else {
+			if allElevators[elevID].IsOnline == false {
+				fmt.Printf("[+] Elevator online ID: %02d\n", elevID) // For debugging purposes. Detect change in online status
+			}
+			allElevators[elevID].IsOnline = true
+		}
 	}
 }
 
@@ -370,7 +383,6 @@ func contSend(channel chan<- messages.ElevatorStatus, list *[config.NumElevators
 	}
 }
 
-
 func RunOrders(chans OrderChannels) {
 
 	fmt.Println("Order module initializing....")
@@ -378,7 +390,7 @@ func RunOrders(chans OrderChannels) {
 	allElevators[config.ID].IsOnline = true
 	allElevators[config.ID].IsAvailable = true
 	chans.AskElevatorForUpdate <- true
-	initFloor := <-chans.New_floor 
+	initFloor := <-chans.New_floor
 	initDoor := <-chans.Door_status
 
 	allElevators[config.ID].Pos = initFloor
@@ -429,7 +441,7 @@ func RunOrders(chans OrderChannels) {
 					go sendOutStatus(send_status, allElevators)
 			*/
 		case IsObstructed := <-chans.DoorObstructed:
-			allElevators[config.ID].IsObstructed = IsObstructed       //TODO burde denne abstraheres ut i en egen funksjon
+			allElevators[config.ID].IsObstructed = IsObstructed //TODO burde denne abstraheres ut i en egen funksjon
 			go sendOutStatus(chans.Send_status, allElevators[config.ID])
 		}
 

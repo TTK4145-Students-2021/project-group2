@@ -6,7 +6,7 @@ import (
 	"../config"
 )
 
-type ButtonType_msg int 
+type ButtonType_msg int
 
 const (
 	BT_HallUp   ButtonType_msg = 0
@@ -35,14 +35,14 @@ type HallOrder struct {
 }
 
 type ElevatorStatus struct {
-	ID          int
-	Pos         int
-	OrderList   [config.NumFloors*2 - 2]HallOrder //
-	Dir         int                               //up = 0, down = 1, stop = 2
-	IsOnline    bool
-	DoorOpen    bool
-	CabOrders   [config.NumFloors]bool
-	IsAvailable bool
+	ID           int
+	Pos          int
+	OrderList    [config.NumFloors*2 - 2]HallOrder //
+	Dir          int                               //up = 0, down = 1, stop = 2
+	IsOnline     bool
+	DoorOpen     bool
+	CabOrders    [config.NumFloors]bool
+	IsAvailable  bool
 	IsObstructed bool
 }
 type ElevatorStatusTest struct {
@@ -72,5 +72,4 @@ type Outer struct {
 	CabOrders   [config.NumFloors]bool
 	IsAvailable bool
 	Timestamp   time.Time
-
 }
