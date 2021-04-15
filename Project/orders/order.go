@@ -42,6 +42,18 @@ type ElevatorStatus struct {
 // 	DOWN Direction = 1
 // )
 
+type OrderChannels struct {
+	Button_press               <-chan messages.ButtonEvent_message //Elevator communiaction
+	Received_elevator_update   <-chan messages.ElevatorStatus //Network communication
+	New_floor                  <-chan int //Elevator communiaction
+	Door_status                <-chan bool //Elevator communiaction
+	Send_status                chan<- messages.ElevatorStatus //Network communication
+	Go_to_floor                chan<- int //Elevator communiaction
+	AskElevatorForUpdate       chan<- bool
+	DoorObstructed             <-chan bool
+	UpdateLampMessage          chan<- messages.LampUpdate_message
+}
+
 func initOrderList() [config.NumFloors*2 - 2]messages.HallOrder {
 	OrderList := [config.NumFloors*2 - 2]messages.HallOrder{}
 
@@ -238,7 +250,7 @@ func orderListIdxToFloor(idx int) int {
 	}
 }
 
-func floorToOrderListIdx(floor int, dir messages.ButtonType_message) int {
+func floorToOrderListIdx(floor int, dir messages.ButtonType_msg) int {
 	if dir == messages.BT_HallUp {
 		return floor
 	} else {
@@ -312,6 +324,30 @@ func updateOrderListCompleted(list *[config.NumElevators]messages.ElevatorStatus
 	}
 }
 
+func sendOutLightsUpdate(sendLampUpdate chan<- messages.LampUpdate_message, status *messages.ElevatorStatus){
+	for{
+		for _, order := range status.OrderList{
+			light := messages.LampUpdate_message{
+				Floor: 	order.Floor,
+				Button: messages.ButtonType_msg(order.Direction), // = 0 up og 1 down
+				Turn:   order.HasOrder,
+			}
+			sendLampUpdate <- light
+			//send light at channel
+		}
+		for i, order := range status.CabOrders{
+
+			light := messages.LampUpdate_message{
+				Floor: 	i,
+				Button: messages.BT_Cab,  // = 0 up og 1 down
+				Turn:  	order,
+			}
+			sendLampUpdate <- light //send light at channel
+		}
+		time.Sleep(time.Millisecond * 100)
+	}
+}
+
 func sendOutStatus(channel chan<- messages.ElevatorStatus, status messages.ElevatorStatus) {
 	channel <- status
 }
@@ -327,22 +363,15 @@ func contSend(channel chan<- messages.ElevatorStatus, list *[config.NumElevators
 	}
 }
 
-func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator communiaction
-	received_elevator_update <-chan messages.ElevatorStatus, //Network communication
-	new_floor <-chan int, //Elevator communiaction
-	door_status <-chan bool, //Elevator communiaction
-	send_status chan<- messages.ElevatorStatus, //Network communication
-	go_to_floor chan<- int, //Elevator communiaction
-	askElevatorForUpdate chan<- bool,
-	doorObstructed <- chan bool) {
+func RunOrders(chans OrderChannels) {
 
 	fmt.Println("Order module initializing....")
 	allElevators := initAllElevatorStatuses()
 	allElevators[config.ID].IsOnline = true
 	allElevators[config.ID].IsAvailable = true
-	askElevatorForUpdate <- true
-	initFloor := <-new_floor
-	initDoor := <-door_status
+	chans.AskElevatorForUpdate <- true
+	initFloor := <-chans.New_floor 
+	initDoor := <-chans.Door_status
 
 	allElevators[config.ID].Pos = initFloor
 	allElevators[config.ID].DoorOpen = initDoor
@@ -350,18 +379,20 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 
 	//go contSend(send_status , &allElevators)
 
+	go sendOutLightsUpdate(chans.UpdateLampMessage, &allElevators[config.ID])
+
 	for {
 		select {
-		case buttonEvent := <-button_press:
+		case buttonEvent := <-chans.Button_press:
 			fmt.Println("--------Button pressed------")
 			updateOrderListButton(buttonEvent, &allElevators[config.ID])
 			updateOrderListCompleted(&allElevators)
 			fmt.Println("-> Status sendt: Buttonpress,", buttonEvent.Button)
 			printElevatorStatus(allElevators[config.ID])
 
-			go sendOutStatus(send_status, allElevators[config.ID])
+			go sendOutStatus(chans.Send_status, allElevators[config.ID])
 
-		case elevatorStatus := <-received_elevator_update: // new update
+		case elevatorStatus := <-chans.Received_elevator_update: // new update
 			// update own orderlist and otherElev with the incomming elevatorStatus         COMMENTED OUT BEACUSE OF TESTING WITHOUT NETWORK MODULE
 
 			if elevatorStatus.ID != config.ID {
@@ -370,29 +401,27 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 				fmt.Println("<- Recived status")
 			}
 
-		case floor := <-new_floor:
+		case floor := <-chans.New_floor:
 			updateElevatorStatusFloor(floor, &allElevators)
-			updateOrderListCompleted(&allElevators)
-			go sendOutStatus(send_status, allElevators[config.ID])
+			//updateOrderListCompleted(&allElevators)
+			go sendOutStatus(chans.Send_status, allElevators[config.ID])
 			fmt.Println("-> Status sendt: New floor:", floor)
 
-		case isOpen := <-door_status:
-			if isOpen == true {
-				time.Sleep(time.Second * 3)
-			} //recives a bool value
+		case isOpen := <-chans.Door_status:
 			updateElevatorStatusDoor(isOpen, &allElevators)
 			if isOpen == true {
+				time.Sleep(time.Second * 3)
 				updateOrderListCompleted(&allElevators)
 			}
-			go sendOutStatus(send_status, allElevators[config.ID])
+			go sendOutStatus(chans.Send_status, allElevators[config.ID])
 			fmt.Println("-> Status sendt: Door: ", isOpen)
 			/*
 				case <-time.After(config.BcastIntervall):
 					go sendOutStatus(send_status, allElevators)
 			*/
-		case IsObstructed := <-doorObstructed:
+		case IsObstructed := <-chans.DoorObstructed:
 			allElevators[config.ID].IsObstructed = IsObstructed       //TODO burde denne abstraheres ut i en egen funksjon
-			go sendOutStatus(send_status, allElevators[config.ID])
+			go sendOutStatus(chans.Send_status, allElevators[config.ID])
 		}
 
 		//allElevators[config.ID].IsAvailable = true
@@ -402,10 +431,10 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 		if newAssignedFloor != -1 && assignedFloor != newAssignedFloor && allElevators[config.ID].DoorOpen && !allElevators[config.ID].IsObstructed {
 			assignedFloor = newAssignedFloor
 			//fmt.Println("Sending out order:", assignedFloor)
-			go sendingElevatorToFloor(go_to_floor, assignedFloor)
+			go sendingElevatorToFloor(chans.Go_to_floor, assignedFloor)
 			//allElevators[config.ID].IsAvailable = false
 			printElevatorStatus(allElevators[config.ID])
-			go sendOutStatus(send_status, allElevators[config.ID])
+			go sendOutStatus(chans.Send_status, allElevators[config.ID])
 			fmt.Println("-> Status sendt: Go to floor ", assignedFloor)
 		}
 

@@ -6,14 +6,22 @@ import (
 	"../config"
 )
 
+type ButtonType_msg int 
+
+const (
+	BT_HallUp   ButtonType_msg = 0
+	BT_HallDown ButtonType_msg = 1
+	BT_Cab      ButtonType_msg = 2
+)
+
 type ButtonEvent_message struct {
 	Floor  int
-	Button int
+	Button ButtonType_msg
 }
 
 type LampUpdate_message struct {
 	Floor  int
-	Button int
+	Button ButtonType_msg
 	Turn   bool
 }
 

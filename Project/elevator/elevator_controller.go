@@ -92,7 +92,7 @@ func (ctr *Controller) Run() error {
 			fmt.Printf("%+v\n", a)
 			message := messages.ButtonEvent_message{
 				Floor:  a.Floor,
-				Button: int(a.Button),
+				Button: messages.ButtonType_msg(a.Button),
 			}
 			channels.RedirectButtonAction <- message
 
@@ -102,8 +102,6 @@ func (ctr *Controller) Run() error {
 			go elev.GotoFloor(a)
 
 		case a := <-channels.ReceiveLampUpdate:
-			fmt.Printf("Lamp update received")
-			fmt.Printf("Lamp update message: %v\n", a)
 			go handleLampUpdate(a)
 
 		case <-channels.ElevatorUpdateRequest:
@@ -115,7 +113,6 @@ func (ctr *Controller) Run() error {
 }
 
 func handleLampUpdate(message messages.LampUpdate_message) {
-	fmt.Println("Setting lamp values")
 	SetButtonLamp(ButtonType(message.Button), message.Floor, message.Turn)
 }
 
