@@ -35,13 +35,6 @@ type ElevatorStatus struct {
 //type HallOrder = messages.HallOrder
 //type ElevatorStatus = messages.ElevatorStatus
 
-// type Direction int
-
-// const (
-// 	UP   Direction = 0
-// 	DOWN Direction = 1
-// )
-
 func initOrderList() [config.NumFloors*2 - 2]messages.HallOrder {
 	OrderList := [config.NumFloors*2 - 2]messages.HallOrder{}
 
@@ -291,18 +284,23 @@ func updateOrderListCompleted(list *[config.NumElevators]messages.ElevatorStatus
 	// checks if the elevator has a cab call for the current floor
 	if list[config.ID].CabOrders[curFloor] == true && list[config.ID].DoorOpen == true {
 		list[config.ID].CabOrders[curFloor] = false
-
 	}
 
 	//Note: this foorloop is here beacuse you have to check both up and down for the same floor, which are stored in diffrent paces in the list
-	// TODO: remove this foor loop
+	// TODO: remove this for loop
 	for i := 0; i < len(list[config.ID].OrderList); i++ {
+		// Algorithm for compleeting hall orders
+		// 1. Remove ONLY one hall order when opening door at correct floor
+		// 2. Start timer
+		// 2.1 If no cab order is placed within timeout -> comlete other hall order on current floor
+		//
 
 		//checks if ther is a hall call at the current floor
 		if list[config.ID].OrderList[i].HasOrder && list[config.ID].OrderList[i].Floor == curFloor && list[config.ID].DoorOpen == true {
 			list[config.ID].OrderList[i].HasOrder = false
-			list[config.ID].OrderList[i].Costs = [config.NumElevators]int{10000}
+			// list[config.ID].OrderList[i].Costs = [config.NumElevators]int{10000}
 			list[config.ID].OrderList[i].VersionNum += 1
+			break
 		}
 	}
 }
@@ -366,7 +364,9 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 		case buttonEvent := <-button_press:
 			fmt.Println("--------Button pressed------")
 			updateOrderListButton(buttonEvent, &allElevators[config.ID])
-			updateOrderListCompleted(&allElevators)
+			if buttonEvent.Button != messages.BT_Cab {
+				updateOrderListCompleted(&allElevators) //This causes hall orders to get lost when it is at floor and hall order up and down is pressed
+			}
 			fmt.Println("-> Status sendt: Buttonpress,", buttonEvent.Button)
 
 			printElevatorStatus(allElevators[config.ID])
@@ -392,14 +392,14 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 				time.Sleep(time.Second * 3)
 			} //recives a bool value
 			updateElevatorStatusDoor(isOpen, &allElevators)
-			if isOpen == true {
-				updateOrderListCompleted(&allElevators)
-			}
+			// if isOpen == true {
+			// 	updateOrderListCompleted(&allElevators)
+			// }
 			go sendOutStatus(send_status, allElevators[config.ID])
 			fmt.Println("-> Status sendt: Door: ", isOpen)
-		case <-time.After(config.BcastIntervall):
-			go sendOutStatus(send_status, allElevators[config.ID])
-			fmt.Println("-> Status sendt: Regular update")
+			// case <-time.After(config.BcastIntervall):
+			// 	go sendOutStatus(send_status, allElevators[config.ID])
+			// 	fmt.Println("-> Status sendt: Regular update")
 		}
 
 		// allElevators[config.ID].IsAvailable = true
@@ -427,11 +427,7 @@ func printOrderList(list [config.NumFloors*2 - 2]messages.HallOrder) {
 }
 
 func printElevatorStatus(status messages.ElevatorStatus) {
-	fmt.Println("ID:", status.ID, " |Currentfloor:", status.Pos, "|CabOrders:", status.CabOrders, "| Door open:", status.DoorOpen, "|avaliable:", status.IsAvailable, "|isOnline:", status.IsOnline)
+	fmt.Println("ID:", status.ID, " |Currentfloor:", status.Pos, "| Door open:", status.DoorOpen, "|avaliable:", status.IsAvailable, "|isOnline:", status.IsOnline, "\n|CabOrders:", status.CabOrders)
 	printOrderList(status.OrderList)
 	fmt.Println("-----------------------------------------------")
-}
-
-func returnOrder() {
-	// Dummy function to test elevatorController
 }
