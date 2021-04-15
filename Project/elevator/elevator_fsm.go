@@ -22,6 +22,7 @@ import (
 */
 
 const _floorPollRate = time.Millisecond * 20
+const _obstrPollRate = time.Millisecond * 20
 const NoFloor int = -1
 
 // StateType is an extensible state type in the elevator
@@ -228,12 +229,7 @@ func (a *InitAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Event
 		time.Sleep(_floorPollRate)
 	}
 	SetMotorDirection(MD_Stop)
-
 	elev.CurrentFloor = GetFloor()
-
-	if GetObstruction() {
-		fmt.Println("Note: Elevator Obstructed!")
-	}
 
 	fmt.Println("Elevator initialized")
 	return SetInitialized
@@ -266,7 +262,12 @@ func (a *MovingAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Eve
 	}
 	SetMotorDirection(dir)
 
-	waitIfObstructed(elev)
+	// Wait to close door if obstructed
+	for GetObstruction() {
+		fmt.Println("Elevator obstructed! Waiting...")
+		time.Sleep(_obstrPollRate)
+	}
+	SetDoorOpenLamp(false)
 
 	for {
 		select {
@@ -300,16 +301,6 @@ func (a *MovingAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Eve
 			default:
 				// Do nothing
 			}
-
-		// If obstructed status changed
-		case isObstructed := <-elev.Channels.drv_obstr:
-			if isObstructed {
-				fmt.Println("Elevator obstructed!")
-				SetMotorDirection(MD_Stop)
-			} else {
-				fmt.Println("Elevator not obstructed anymore.")
-				SetMotorDirection(dir)
-			}
 		}
 
 		// POTENTIAL IMPROVEMENT: Implement a channel than enables breaking the elevators operation midway
@@ -324,23 +315,6 @@ func (a *AtFloorOpenAction) Execute(elev *ElevatorMachine, eventCtx EventContext
 	fmt.Println("Elevator doors open")
 	elev.Available = true
 	return NoOp
-}
-
-// Used to halt move operation if elevator is obstructed upon call
-func waitIfObstructed(elev *ElevatorMachine) {
-	for GetObstruction() {
-		fmt.Println("Elevator obstructed!")
-		SetMotorDirection(MD_Stop)
-		select {
-		case a := <-elev.Channels.drv_obstr:
-			fmt.Printf("%+v\n", a)
-			if a {
-				SetMotorDirection(MD_Stop)
-			} else {
-				SetMotorDirection(MD_Down)
-			}
-		}
-	}
 }
 
 /*COMMENT ON ACTION STRUCTS:

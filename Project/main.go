@@ -21,6 +21,7 @@ func main() {
 	// Setup all the channels we need
 	getElevatorUpdate := make(chan bool)
 	doorOpen := make(chan bool)
+	doorObstructed := make(chan bool)
 	currentFloor := make(chan int)                          //new  floor
 	buttonAction := make(chan messages.ButtonEvent_message) //pressed button
 	order := make(chan int)                                 // goTo floor
@@ -28,7 +29,7 @@ func main() {
 	controllerReady := make(chan bool)                      // Check when controller is done
 	elevatorStatusTx := make(chan messages.ElevatorStatus)  // Change to orders.ElevatorStatus
 	elevatorStatusRx := make(chan messages.ElevatorStatus)  // Change to orders.ElevatorStatus
-//
+	//
 	// Bundle controller channels in a struct
 	ctrChans := elevator.ControllerChannels{
 		DoorOpen:              doorOpen,
@@ -38,6 +39,7 @@ func main() {
 		RespondOrder:          orderResponse,
 		ElevatorUpdateRequest: getElevatorUpdate,
 		ControllerReady:       controllerReady,
+		DoorObstructed:        doorObstructed,
 	}
 
 	controller := elevator.NewController(ctrChans)

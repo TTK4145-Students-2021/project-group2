@@ -30,6 +30,7 @@ type ControllerChannels struct {
 	RespondOrder          chan<- error
 	ElevatorUpdateRequest <-chan bool
 	ControllerReady       chan<- bool
+	DoorObstructed        chan<- bool
 }
 
 type Controller struct {
@@ -79,6 +80,7 @@ func (ctr *Controller) Run() error {
 	// Start polling routines for updating external listener
 	go ctr.pollDoorOpen(elev)
 	go ctr.pollElevFloor(elev)
+	go ctr.pollDoorObstructed(elev)
 
 	ctr.Channels.ControllerReady <- true
 
@@ -115,6 +117,7 @@ func (ctr *Controller) Run() error {
 		case <-channels.ElevatorUpdateRequest:
 			channels.CurrentFloor <- elev.CurrentFloor
 			channels.DoorOpen <- elev.Available
+			channels.DoorObstructed <- GetObstruction()
 		}
 	}
 }
@@ -155,6 +158,20 @@ func (ctr *Controller) pollElevFloor(elev *ElevatorMachine) {
 		if v != prev && v != -1 {
 			SetFloorIndicator(v)
 			ctr.Channels.CurrentFloor <- v
+			prev = v
+		}
+	}
+}
+
+// pollDoorObstructed sends update to listener if elevator door is obstructed
+func (ctr *Controller) pollDoorObstructed(elev *ElevatorMachine) {
+	prev := GetObstruction()
+	ctr.Channels.DoorObstructed <- prev
+	for {
+		time.Sleep(_ctrPollRate)
+		v := GetObstruction()
+		if v != prev {
+			ctr.Channels.DoorObstructed <- v
 			prev = v
 		}
 	}
