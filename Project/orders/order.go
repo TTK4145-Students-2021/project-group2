@@ -92,6 +92,7 @@ func initAllElevatorStatuses() [config.NumElevators]messages.ElevatorStatus {
 			DoorOpen:    false,
 			CabOrders:   CabOrders,
 			IsAvailable: false, //NB isAvaliable is deafult false
+			Timestamp:   time.Now().Add(-time.Hour),
 		}
 		listOfElevators[i] = Status
 	}
@@ -206,7 +207,6 @@ func goToFloor(list *[config.NumElevators]messages.ElevatorStatus) int {
 		costMatrix[i] = list[config.ID].OrderList[i].Costs
 	}
 	lowestCost := 500
-	fmt.Println(costMatrix)
 
 	for i := 0; i < config.NumElevators; i++ {
 
@@ -243,7 +243,7 @@ func floorToOrderListIdx(floor int, dir messages.ButtonType_message) int {
 }
 
 func minumumRowCol(list [][config.NumElevators]int) (int, int) {
-	min := 9999999999999
+	min := config.MaxInt
 	minRowIndex := -1
 	minColIndex := -1
 	for rowIndex, row := range list {
@@ -308,6 +308,7 @@ func updateOrderListCompleted(list *[config.NumElevators]messages.ElevatorStatus
 }
 
 func sendOutStatus(channel chan<- messages.ElevatorStatus, status messages.ElevatorStatus) {
+	status.Timestamp = time.Now()
 	channel <- status
 }
 func sendingElevatorToFloor(channel chan<- int, goToFloor int) {
@@ -319,6 +320,16 @@ func contSend(channel chan<- messages.ElevatorStatus, list *[config.NumElevators
 		status := *list
 		go sendOutStatus(channel, status[config.ID])
 		time.Sleep(config.BcastIntervall)
+	}
+}
+
+func checkIfElevatorOffline(allElevators *[config.NumElevators]messages.ElevatorStatus) {
+	for elevID := range allElevators {
+		if time.Since(allElevators[elevID].Timestamp) > config.OfflineTimeout && elevID != config.ID {
+			allElevators[elevID].IsOnline = false
+		} else {
+			allElevators[elevID].IsOnline = true
+		}
 	}
 }
 
@@ -351,8 +362,8 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 			updateOrderListButton(buttonEvent, &allElevators[config.ID])
 			updateOrderListCompleted(&allElevators)
 			fmt.Println("-> Status sendt: Buttonpress,", buttonEvent.Button)
-			printElevatorStatus(allElevators[config.ID])
 
+			printElevatorStatus(allElevators[config.ID])
 			go sendOutStatus(send_status, allElevators[config.ID])
 
 		case elevatorStatus := <-received_elevator_update: // new update
@@ -386,7 +397,7 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 			*/
 		}
 
-		//allElevators[config.ID].IsAvailable = true
+		// allElevators[config.ID].IsAvailable = true
 		newAssignedFloor := goToFloor(&allElevators)
 		printElevatorStatus(allElevators[config.ID])
 
@@ -399,7 +410,7 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 			go sendOutStatus(send_status, allElevators[config.ID])
 			fmt.Println("-> Status sendt: Go to floor ", assignedFloor)
 		}
-
+		checkIfElevatorOffline(&allElevators)
 	}
 }
 
@@ -411,7 +422,7 @@ func printOrderList(list [config.NumFloors*2 - 2]messages.HallOrder) {
 }
 
 func printElevatorStatus(status messages.ElevatorStatus) {
-	fmt.Println("ID: ", status.ID, " |Currentfloor: ", status.Pos, "|CabOrders ", status.CabOrders, "| Door open: ", status.DoorOpen, "|avaliable: ", status.IsAvailable, status.IsOnline)
+	fmt.Println("ID:", status.ID, " |Currentfloor:", status.Pos, "|CabOrders:", status.CabOrders, "| Door open:", status.DoorOpen, "|avaliable:", status.IsAvailable, "|isOnline:", status.IsOnline)
 	printOrderList(status.OrderList)
 	fmt.Println("-----------------------------------------------")
 }
