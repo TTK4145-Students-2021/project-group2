@@ -326,8 +326,14 @@ func contSend(channel chan<- messages.ElevatorStatus, list *[config.NumElevators
 func checkIfElevatorOffline(allElevators *[config.NumElevators]messages.ElevatorStatus) {
 	for elevID := range allElevators {
 		if time.Since(allElevators[elevID].Timestamp) > config.OfflineTimeout && elevID != config.ID {
+			if allElevators[elevID].IsOnline == true {
+				fmt.Printf("[-] Elevator offline ID: %02d\n", elevID) // For debugging purposes. Detect change in online status
+			}
 			allElevators[elevID].IsOnline = false
 		} else {
+			if allElevators[elevID].IsOnline == false {
+				fmt.Printf("[+] Elevator online ID: %02d\n", elevID) // For debugging purposes. Detect change in online status
+			}
 			allElevators[elevID].IsOnline = true
 		}
 	}
@@ -391,10 +397,9 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 			}
 			go sendOutStatus(send_status, allElevators[config.ID])
 			fmt.Println("-> Status sendt: Door: ", isOpen)
-			/*
-				case <-time.After(config.BcastIntervall):
-					go sendOutStatus(send_status, allElevators)
-			*/
+		case <-time.After(config.BcastIntervall):
+			go sendOutStatus(send_status, allElevators[config.ID])
+			fmt.Println("-> Status sendt: Regular update")
 		}
 
 		// allElevators[config.ID].IsAvailable = true

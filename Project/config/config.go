@@ -25,7 +25,7 @@ const BcastPort int = 12345
 const PeersPort int = 54321
 const BcastIntervall time.Duration = 1000 * time.Millisecond
 
-const OfflineTimeout time.Duration = 60 * time.Second
+const OfflineTimeout time.Duration = 5 * time.Second
 
 var SimPort string
 
