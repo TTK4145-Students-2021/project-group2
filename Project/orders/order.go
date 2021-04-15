@@ -92,6 +92,7 @@ func initAllElevatorStatuses() [config.NumElevators]messages.ElevatorStatus {
 			DoorOpen:    false,
 			CabOrders:   CabOrders,
 			IsAvailable: false, //NB isAvaliable is deafult false
+			IsObstructed: false,
 		}
 		listOfElevators[i] = Status
 	}
@@ -135,6 +136,9 @@ func costFunction(num int, list *[config.NumElevators]messages.ElevatorStatus) {
 		if !elevator.IsAvailable || !elevator.IsOnline {
 			cost += 4000
 		}
+		if elevator.IsObstructed{
+			cost += 100
+		} 
 
 		// for loop checking if the elevator has a CabOrders
 		for j := 0; j < config.NumFloors; j++ { //organize into function
@@ -303,6 +307,7 @@ func updateOrderListCompleted(list *[config.NumElevators]messages.ElevatorStatus
 			list[config.ID].OrderList[i].HasOrder = false
 			list[config.ID].OrderList[i].Costs = [config.NumElevators]int{10000}
 			list[config.ID].OrderList[i].VersionNum += 1
+			break
 		}
 	}
 }
@@ -328,7 +333,8 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 	door_status <-chan bool, //Elevator communiaction
 	send_status chan<- messages.ElevatorStatus, //Network communication
 	go_to_floor chan<- int, //Elevator communiaction
-	askElevatorForUpdate chan<- bool) {
+	askElevatorForUpdate chan<- bool,
+	doorObstructed <- chan bool) {
 
 	fmt.Println("Order module initializing....")
 	allElevators := initAllElevatorStatuses()
@@ -384,13 +390,16 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 				case <-time.After(config.BcastIntervall):
 					go sendOutStatus(send_status, allElevators)
 			*/
+		case IsObstructed := <-doorObstructed:
+			allElevators[config.ID].IsObstructed = IsObstructed       //TODO burde denne abstraheres ut i en egen funksjon
+			go sendOutStatus(send_status, allElevators[config.ID])
 		}
 
 		//allElevators[config.ID].IsAvailable = true
 		newAssignedFloor := goToFloor(&allElevators)
 		printElevatorStatus(allElevators[config.ID])
 
-		if newAssignedFloor != -1 && assignedFloor != newAssignedFloor && allElevators[config.ID].DoorOpen {
+		if newAssignedFloor != -1 && assignedFloor != newAssignedFloor && allElevators[config.ID].DoorOpen && !allElevators[config.ID].IsObstructed {
 			assignedFloor = newAssignedFloor
 			//fmt.Println("Sending out order:", assignedFloor)
 			go sendingElevatorToFloor(go_to_floor, assignedFloor)
@@ -411,7 +420,7 @@ func printOrderList(list [config.NumFloors*2 - 2]messages.HallOrder) {
 }
 
 func printElevatorStatus(status messages.ElevatorStatus) {
-	fmt.Println("ID: ", status.ID, " |Currentfloor: ", status.Pos, "|CabOrders ", status.CabOrders, "| Door open: ", status.DoorOpen, "|avaliable: ", status.IsAvailable, status.IsOnline)
+	fmt.Println("ID: ", status.ID, " |Currentfloor: ", status.Pos, "|CabOrders ", status.CabOrders, "| Door open: ", status.DoorOpen, "|avaliable: ", status.IsAvailable, status.IsOnline, status.IsObstructed)
 	printOrderList(status.OrderList)
 	fmt.Println("-----------------------------------------------")
 }

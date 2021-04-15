@@ -57,6 +57,7 @@ func main() {
 		doorOpen,
 		elevatorStatusTx, //Network communication
 		order,
-		getElevatorUpdate)
+		getElevatorUpdate,
+		doorObstructed)
 
 }

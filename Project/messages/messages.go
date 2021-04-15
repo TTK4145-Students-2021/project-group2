@@ -38,6 +38,7 @@ type ElevatorStatus struct {
 	DoorOpen    bool
 	CabOrders   [config.NumFloors]bool
 	IsAvailable bool
+	IsObstructed bool
 }
 type ElevatorStatusTest struct {
 	ID  int
