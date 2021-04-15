@@ -302,7 +302,6 @@ func (a *MovingAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Eve
 				// Do nothing
 			}
 		}
-
 		// POTENTIAL IMPROVEMENT: Implement a channel than enables breaking the elevators operation midway
 	}
 }

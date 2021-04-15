@@ -31,6 +31,7 @@ type ControllerChannels struct {
 	ElevatorUpdateRequest <-chan bool
 	ControllerReady       chan<- bool
 	DoorObstructed        chan<- bool
+	ReceiveLampUpdate     <-chan messages.LampUpdate_message
 }
 
 type Controller struct {
@@ -75,12 +76,11 @@ func (ctr *Controller) Run() error {
 	// Start elevator driver routines
 	go PollButtons(drv_buttons)
 	go PollFloorSensor(drv_floors)
-	go PollObstructionSwitch(drv_obstr)
-
-	// Start polling routines for updating external listener
+	// Start routines for communication with external modules
 	go ctr.pollDoorOpen(elev)
 	go ctr.pollElevFloor(elev)
 	go ctr.pollDoorObstructed(elev)
+	//go ctr.ReceiveLampUpdates()
 
 	ctr.Channels.ControllerReady <- true
 
@@ -90,29 +90,21 @@ func (ctr *Controller) Run() error {
 		case a := <-drv_buttons:
 			fmt.Println("Button press registered")
 			fmt.Printf("%+v\n", a)
-
-			// Convert to type ButtonEvent_message before sending
-			btm := messages.UNDEFINED
-			switch a.Button {
-			case BT_HallUp:
-				btm = messages.BT_HallUp
-			case BT_HallDown:
-				btm = messages.BT_HallDown
-			case BT_Cab:
-				btm = messages.BT_Cab
-			}
 			message := messages.ButtonEvent_message{
 				Floor:  a.Floor,
-				Button: btm,
+				Button: int(a.Button),
 			}
-
 			channels.RedirectButtonAction <- message
 
 		case a := <-channels.ReceiveOrder:
 			fmt.Printf("New order received\n")
 			fmt.Printf("Target floor: %v\n", a)
-
 			go elev.GotoFloor(a)
+
+		case a := <-channels.ReceiveLampUpdate:
+			fmt.Printf("Lamp update received")
+			fmt.Printf("Lamp update message: %v\n", a)
+			go handleLampUpdate(a)
 
 		case <-channels.ElevatorUpdateRequest:
 			channels.CurrentFloor <- elev.CurrentFloor
@@ -120,6 +112,11 @@ func (ctr *Controller) Run() error {
 			channels.DoorObstructed <- GetObstruction()
 		}
 	}
+}
+
+func handleLampUpdate(message messages.LampUpdate_message) {
+	fmt.Println("Setting lamp values")
+	SetButtonLamp(ButtonType(message.Button), message.Floor, message.Turn)
 }
 
 // SendElevatorStatus is used to send a full status report to channel recipients if requested
