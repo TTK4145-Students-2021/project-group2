@@ -33,6 +33,7 @@ const (
 type ButtonType int
 
 const (
+	UNDEFINED   ButtonType = -1
 	BT_HallUp   ButtonType = 0
 	BT_HallDown            = 1
 	BT_Cab                 = 2
@@ -110,6 +111,7 @@ func PollFloorSensor(receiver chan<- int) {
 	}
 }
 
+/*
 func PollObstructionSwitch(receiver chan<- bool) {
 	prev := false
 	for {
@@ -121,6 +123,7 @@ func PollObstructionSwitch(receiver chan<- bool) {
 		prev = v
 	}
 }
+*/
 
 func getButton(button ButtonType, floor int) bool {
 	_mtx.Lock()

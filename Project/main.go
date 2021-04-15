@@ -21,6 +21,7 @@ func main() {
 	// Setup all the channels we need
 	getElevatorUpdate := make(chan bool)
 	doorOpen := make(chan bool)
+	doorObstructed := make(chan bool)
 	currentFloor := make(chan int)                          //new  floor
 	buttonAction := make(chan messages.ButtonEvent_message) //pressed button
 	order := make(chan int)                                 // goTo floor
@@ -28,16 +29,32 @@ func main() {
 	controllerReady := make(chan bool)                      // Check when controller is done
 	elevatorStatusTx := make(chan messages.ElevatorStatus)  // Change to orders.ElevatorStatus
 	elevatorStatusRx := make(chan messages.ElevatorStatus)  // Change to orders.ElevatorStatus
+	lampNotifications := make(chan messages.LampUpdate_message)
+
 	//
 	// Bundle controller channels in a struct
 	ctrChans := elevator.ControllerChannels{
-		DoorOpen:              doorOpen,
-		CurrentFloor:          currentFloor,
-		RedirectButtonAction:  buttonAction,
-		ReceiveOrder:          order,
-		RespondOrder:          orderResponse,
+		DoorOpen             : doorOpen,
+		CurrentFloor         : currentFloor,
+		RedirectButtonAction : buttonAction,
+		ReceiveOrder         : order,
+		RespondOrder         : orderResponse,
 		ElevatorUpdateRequest: getElevatorUpdate,
-		ControllerReady:       controllerReady,
+		ControllerReady      : controllerReady,
+		DoorObstructed       : doorObstructed,
+		ReceiveLampUpdate    : lampNotifications,
+	}
+
+	orderChans := orders.OrderChannels{
+		Button_press            : buttonAction,
+		Received_elevator_update: elevatorStatusRx,
+		New_floor               : currentFloor,
+		Door_status             : doorOpen,
+		Send_status             : elevatorStatusTx,
+		Go_to_floor             : order,
+		AskElevatorForUpdate    : getElevatorUpdate,
+		DoorObstructed          : doorObstructed,
+		UpdateLampMessage       : lampNotifications,
 	}
 
 	controller := elevator.NewController(ctrChans)
@@ -49,12 +66,7 @@ func main() {
 	go bcast.Transmitter(config.BcastPort, elevatorStatusTx)
 	go bcast.Receiver(config.BcastPort, elevatorStatusRx)
 
-	orders.RunOrders(buttonAction,
-		elevatorStatusRx, //<- chan ElevatorStatus,    //Network communication
-		currentFloor,
-		doorOpen,
-		elevatorStatusTx, //Network communication
-		order,
-		getElevatorUpdate)
+	orders.RunOrders(orderChans)
+
 
 }
