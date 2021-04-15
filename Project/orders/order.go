@@ -322,6 +322,31 @@ func contSend(channel chan<- messages.ElevatorStatus, list *[config.NumElevators
 	}
 }
 
+func checkIfEngineFails(assignedFloor *int, status *messages.ElevatorStatus, send_status chan<- messages.ElevatorStatus,){
+	faultCounter := 0
+	curPos := -1
+	lastPos := status.Pos
+	for *assignedFloor!= -1{
+		curPos = status.Pos
+		if curPos == *assignedFloor{
+			break
+		}
+		if curPos != lastPos{
+			lastPos = curPos
+		}else {
+			faultCounter +=1
+			if faultCounter>5{
+				status.IsAvailable = false
+				printElevatorStatus(*status)
+				go sendOutStatus(send_status, *status)
+
+				return
+			}
+		}
+		time.Sleep(time.Second*1)
+	}
+}
+
 func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator communiaction
 	received_elevator_update <-chan messages.ElevatorStatus, //Network communication
 	new_floor <-chan int, //Elevator communiaction
@@ -394,6 +419,8 @@ func RunOrders(button_press <-chan messages.ButtonEvent_message, //Elevator comm
 			assignedFloor = newAssignedFloor
 			//fmt.Println("Sending out order:", assignedFloor)
 			go sendingElevatorToFloor(go_to_floor, assignedFloor)
+
+			go checkIfEngineFails(&assignedFloor,&allElevators[config.ID],send_status,)
 			//allElevators[config.ID].IsAvailable = false
 			printElevatorStatus(allElevators[config.ID])
 			go sendOutStatus(send_status, allElevators[config.ID])
