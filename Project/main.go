@@ -52,7 +52,7 @@ func main() {
 	orders.RunOrders(buttonAction,
 		elevatorStatusRx, //<- chan ElevatorStatus,    //Network communication
 		currentFloor,
-		elevAvailable,
+		doorOpen,
 		elevatorStatusTx, //Network communication
 		order,
 		getElevatorUpdate)
