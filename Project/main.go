@@ -30,6 +30,7 @@ func main() {
 	elevatorStatusTx := make(chan messages.ElevatorStatus)  // Change to orders.ElevatorStatus
 	elevatorStatusRx := make(chan messages.ElevatorStatus)  // Change to orders.ElevatorStatus
 	lampNotifications := make(chan messages.LampUpdate_message)
+
 	//
 	// Bundle controller channels in a struct
 	ctrChans := elevator.ControllerChannels{
@@ -66,5 +67,6 @@ func main() {
 	go bcast.Receiver(config.BcastPort, elevatorStatusRx)
 
 	orders.RunOrders(orderChans)
+
 
 }

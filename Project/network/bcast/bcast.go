@@ -31,7 +31,6 @@ func Transmitter(port int, chans ...interface{}) {
 			TypeId: typeNames[chosen],
 			JSON:   jsonstr,
 		})
-		// fmt.Println("TX: _*_*_*_**_*_*_* TTJ:", ttj)
 		conn.WriteTo(ttj, addr)
 	}
 }
@@ -55,7 +54,6 @@ func Receiver(port int, chans ...interface{}) {
 
 		var ttj typeTaggedJSON
 		json.Unmarshal(buf[0:n], &ttj)
-		// fmt.Println("RX: _*_*_*_**_*_*_* TTJ:", ttj)
 		ch := chansMap[ttj.TypeId]
 		v := reflect.New(reflect.TypeOf(ch).Elem())
 		json.Unmarshal(ttj.JSON, v.Interface())

@@ -71,4 +71,6 @@ type Outer struct {
 	DoorOpen    bool
 	CabOrders   [config.NumFloors]bool
 	IsAvailable bool
+	Timestamp   time.Time
+
 }
