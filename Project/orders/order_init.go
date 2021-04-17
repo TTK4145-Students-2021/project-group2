@@ -47,13 +47,13 @@ func initAllElevatorStatuses() [numElevators]ElevatorStatus {
 
 func initThisElevatorStatus(allElevatorSatuses *[numElevators]ElevatorStatus, chans OrderChannels){
 	
-	allElevatorSatuses[thisID].IsOnline = true
-	allElevatorSatuses[thisID].IsAvailable = true
+	allElevatorSatuses[curID].IsOnline = true
+	allElevatorSatuses[curID].IsAvailable = true
 
 	chans.Get_init_position <- true
 	initFloor := <-chans.New_floor
 	initDoor := <-chans.Door_status
 
-	allElevatorSatuses[thisID].Pos = initFloor
-	allElevatorSatuses[thisID].DoorOpen = initDoor
+	allElevatorSatuses[curID].Pos = initFloor
+	allElevatorSatuses[curID].DoorOpen = initDoor
 }
