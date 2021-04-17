@@ -4,6 +4,7 @@ import (
 	//"os"
 	"fmt"
 	"time"
+	"errors"
 
 	"../config"
 	"../messages"
@@ -328,18 +329,20 @@ func checkIfEngineFails(assignedFloor *int, status *messages.ElevatorStatus, sen
 	lastPos := status.Pos
 	for *assignedFloor!= -1{
 		curPos = status.Pos
+		fmt.Println(curPos)
 		if curPos == *assignedFloor{
-			break
+			return
 		}
 		if curPos != lastPos{
 			lastPos = curPos
 		}else {
 			faultCounter +=1
-			if faultCounter>5{
+			if faultCounter>10{
 				status.IsAvailable = false
 				printElevatorStatus(*status)
 				go sendOutStatus(send_status, *status)
-
+				err := errors.New("engine failure")
+				panic(err)
 				return
 			}
 		}
