@@ -1,4 +1,4 @@
-package elevio
+package elevator
 
 import (
 	"fmt"
@@ -7,6 +7,14 @@ import (
 	"time"
 )
 
+/*=============================================================================
+ * @Description: Driver functions needed to communicate with an elevator.
+ * Code pre-distributed from subject coordinators.
+ *
+ * @Author: Unknown
+/*=============================================================================
+*/
+
 const _pollRate = 20 * time.Millisecond
 
 var _initialized bool = false
@@ -14,12 +22,29 @@ var _numFloors int = 4
 var _mtx sync.Mutex
 var _conn net.Conn
 
+type MotorDirection int
+
+const (
+	MD_Up   MotorDirection = 1
+	MD_Down                = -1
+	MD_Stop                = 0
+)
+
+type ButtonType int
+
+const (
+	UNDEFINED   ButtonType = -1
+	BT_HallUp   ButtonType = 0
+	BT_HallDown            = 1
+	BT_Cab                 = 2
+)
+
 type ButtonEvent struct {
 	Floor  int
 	Button ButtonType
 }
 
-func Init(addr string, numFloors int) {
+func InitElevatorDriver(addr string, numFloors int) {
 	if _initialized {
 		fmt.Println("Driver already initialized!")
 		return
@@ -58,12 +83,6 @@ func SetDoorOpenLamp(value bool) {
 	_conn.Write([]byte{4, toByte(value), 0, 0})
 }
 
-func SetStopLamp(value bool) {
-	_mtx.Lock()
-	defer _mtx.Unlock()
-	_conn.Write([]byte{5, toByte(value), 0, 0})
-}
-
 func PollButtons(receiver chan<- ButtonEvent) {
 	prev := make([][3]bool, _numFloors)
 	for {
@@ -84,7 +103,7 @@ func PollFloorSensor(receiver chan<- int) {
 	prev := -1
 	for {
 		time.Sleep(_pollRate)
-		v := getFloor()
+		v := GetFloor()
 		if v != prev && v != -1 {
 			receiver <- v
 		}
@@ -92,29 +111,19 @@ func PollFloorSensor(receiver chan<- int) {
 	}
 }
 
-func PollStopButton(receiver chan<- bool) {
-	prev := false
-	for {
-		time.Sleep(_pollRate)
-		v := getStop()
-		if v != prev {
-			receiver <- v
-		}
-		prev = v
-	}
-}
-
+/*
 func PollObstructionSwitch(receiver chan<- bool) {
 	prev := false
 	for {
 		time.Sleep(_pollRate)
-		v := getObstruction()
+		v := GetObstruction()
 		if v != prev {
 			receiver <- v
 		}
 		prev = v
 	}
 }
+*/
 
 func getButton(button ButtonType, floor int) bool {
 	_mtx.Lock()
@@ -125,7 +134,7 @@ func getButton(button ButtonType, floor int) bool {
 	return toBool(buf[1])
 }
 
-func getFloor() int {
+func GetFloor() int {
 	_mtx.Lock()
 	defer _mtx.Unlock()
 	_conn.Write([]byte{7, 0, 0, 0})
@@ -138,16 +147,7 @@ func getFloor() int {
 	}
 }
 
-func getStop() bool {
-	_mtx.Lock()
-	defer _mtx.Unlock()
-	_conn.Write([]byte{8, 0, 0, 0})
-	var buf [4]byte
-	_conn.Read(buf[:])
-	return toBool(buf[1])
-}
-
-func getObstruction() bool {
+func GetObstruction() bool {
 	_mtx.Lock()
 	defer _mtx.Unlock()
 	_conn.Write([]byte{9, 0, 0, 0})
