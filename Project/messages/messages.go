@@ -9,6 +9,7 @@ import (
 type ButtonType_msg int
 
 const (
+	UNDEFINED   ButtonType_msg = -1
 	BT_HallUp   ButtonType_msg = 0
 	BT_HallDown ButtonType_msg = 1
 	BT_Cab      ButtonType_msg = 2
@@ -44,6 +45,7 @@ type ElevatorStatus struct {
 	CabOrders    [config.NumFloors]bool
 	IsAvailable  bool
 	IsObstructed bool
+	Timestamp    time.Time
 }
 type ElevatorStatusTest struct {
 	ID  int
