@@ -1,10 +1,15 @@
 package orders
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
+
+	"../config"
 )
 
 // Souces:
@@ -44,24 +49,46 @@ func NewBackup(filename string) *BackupFile {
 	return file
 }
 
-// RecoverFromBackup reads the file and updates a CabOrder-list
-func (bf *BackupFile) RecoverFromBackup( /*[config.NumFloors]CabOrders*/ ) {
+// RecoverCabOrders reads the file and updates a CabOrder-list
+func (bf *BackupFile) RecoverCabOrders(cabOrders *[config.NumFloors]bool) {
 
-	// TODO: Implement functionality for returning everything from the recovery system
+	file, err := os.Open(bf.Path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
 
-}
-
-// WriteToBackup takes in a CabOrder-list and writes them to the backupfile
-func (bf *BackupFile) WriteToBackup( /*[config.NumFloors]CabOrders*/ ) {
-
-}
-
-// WriteToFile writes a line to file. Option to add a newLine automatically
-func (bf *BackupFile) WriteToFile(line string, newLine bool) {
-	if newLine {
-		line = line + "\n"
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		lineParsed := strings.Split(line, " ")
+		index := lineParsed[1]
+		indexInt, _ := strconv.Atoi(index)
+		status := lineParsed[4]
+		cabOrders[indexInt], _ = strconv.ParseBool(status)
+		fmt.Println("index: " + index + " | status: " + status)
 	}
 
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// SaveCabOrders takes in a CabOrder-list and writes them to the backupfile
+func (bf *BackupFile) SaveCabOrders(cabOrders [config.NumFloors]bool) {
+
+	bf.ClearFile()
+
+	for i := range cabOrders {
+		indexString := strconv.Itoa(i)
+		statusString := strconv.FormatBool(cabOrders[i])
+		line := "Floor: " + indexString + " | CabOrderStatus: " + statusString + "\n"
+		bf.WriteToFile(line)
+	}
+}
+
+// WriteToFile writes a line to file.
+func (bf *BackupFile) WriteToFile(line string) {
 	f, err := os.OpenFile(bf.Path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		panic(err)

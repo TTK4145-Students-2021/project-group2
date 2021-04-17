@@ -4,10 +4,14 @@ import "testing"
 
 func TestBackup(t *testing.T) {
 
+	testSlice := [4]bool{false, false, true, true}
+
 	backup := NewBackup("backup.txt")
-	backup.RecoverFromBackup()
-	backup.WriteToFile("Sloppy Seconds", false)
-	backup.WriteToFile("Hey Yo!", false)
-	backup.DeleteFile()
+	//backup.WriteToFile("Sloppy Seconds\n")
+	//backup.WriteToFile("Hey Yo!\n")
+	//backup.WriteToFile("Meh\n")
+	backup.SaveCabOrders(testSlice)
+	backup.RecoverCabOrders(&testSlice)
+	//backup.DeleteFile()
 	//backup.ClearFile()
 }
