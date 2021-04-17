@@ -2,6 +2,7 @@ package orders
 
 import (
 	//"os"
+	"errors"
 	"fmt"
 	"time"
 
@@ -382,6 +383,32 @@ func contSend(channel chan<- messages.ElevatorStatus, list *[config.NumElevators
 		time.Sleep(config.BcastIntervall)
 	}
 }
+func checkIfEngineFails(assignedFloor int, status *messages.ElevatorStatus, send_status chan<- messages.ElevatorStatus) {
+	faultCounter := 0
+	curPos := -1
+	lastPos := -1
+	for assignedFloor != -1 {
+		curPos = status.Pos
+		fmt.Println(curPos)
+		if curPos == assignedFloor {
+			return
+		}
+		if curPos != lastPos {
+			lastPos = curPos
+		} else {
+			faultCounter += 1
+			if faultCounter > 10 {
+				status.IsAvailable = false
+				printElevatorStatus(*status)
+				go sendOutStatus(send_status, *status)
+				err := errors.New("engine failure")
+				panic(err)
+				return
+			}
+		}
+		time.Sleep(time.Second * 1)
+	}
+}
 
 func RunOrders(chans OrderChannels) {
 
@@ -450,14 +477,14 @@ func RunOrders(chans OrderChannels) {
 		// allElevators[config.ID].IsAvailable = true
 		newAssignedOrder := goToFloor(&allElevators)
 		// printElevatorStatus(allElevators[config.ID])
-		if newAssignedOrder != assignedOrder {
+		//if newAssignedOrder.Floor == -1 {
+		//	assignedOrder = newAssignedOrder
+		//}
+		// it isn't able to complete a order if it recives a matching order ass the previous while its TimedOut
+		// if newAssignedOrder.Floor != -1 && newAssignedOrder != assignedOrder && allElevators[config.ID].DoorOpen && !allElevators[config.ID].IsObstructed && time.Since(orderTimeOut) > config.OrderTimeOut {
+		if newAssignedOrder.Floor != -1 && allElevators[config.ID].DoorOpen && !allElevators[config.ID].IsObstructed && time.Since(orderTimeOut) > config.OrderTimeOut {
 			assignedOrder = newAssignedOrder
-		}
-
-		if assignedOrder.Floor != -1 && allElevators[config.ID].DoorOpen && !allElevators[config.ID].IsObstructed && time.Since(orderTimeOut) > config.OrderTimeOut {
-			// assignedOrder = newAssignedOrder
 			//fmt.Println("Sending out order:", assignedFloor)
-			// assignedOrder = newAssignedOrder
 
 			go sendingElevatorToFloor(chans.Go_to_floor, assignedOrder.Floor)
 
@@ -468,6 +495,7 @@ func RunOrders(chans OrderChannels) {
 			//printElevatorStatus(allElevators[config.ID])
 			go sendOutStatus(chans.Send_status, allElevators[config.ID])
 			fmt.Println("-> Status sendt: Go to floor ", assignedOrder.Floor)
+			go checkIfEngineFails(assignedOrder.Floor, &allElevators[config.ID], chans.Send_status)
 			printElevatorStatus(allElevators[config.ID])
 
 		}
