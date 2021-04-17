@@ -355,12 +355,12 @@ func checkIfElevatorOffline(allElevators *[config.NumElevators]messages.Elevator
 	for elevID := range allElevators {
 		if time.Since(allElevators[elevID].Timestamp) > config.OfflineTimeout && elevID != config.ID {
 			if allElevators[elevID].IsOnline == true {
-				fmt.Printf("[-] Elevator offline ID: %02d\n", elevID) // For debugging purposes. Detect change in online status
+				fmt.Printf("[-] Elevator offline ID: %02d\n", elevID)
 			}
 			allElevators[elevID].IsOnline = false
 		} else {
 			if allElevators[elevID].IsOnline == false {
-				fmt.Printf("[+] Elevator online ID: %02d\n", elevID) // For debugging purposes. Detect change in online status
+				fmt.Printf("[+] Elevator online ID: %02d\n", elevID)
 			}
 			allElevators[elevID].IsOnline = true
 		}
