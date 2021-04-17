@@ -52,7 +52,7 @@ func main() {
 		Door_status             : doorOpen,
 		Send_status             : elevatorStatusTx,
 		Go_to_floor             : order,
-		AskElevatorForUpdate    : getElevatorUpdate,
+		Get_init_position  	 	: getElevatorUpdate,
 		DoorObstructed          : doorObstructed,
 		UpdateLampMessage       : lampNotifications,
 	}
