@@ -1,4 +1,4 @@
-package recovery_system
+package orders
 
 import (
 	"fmt"
