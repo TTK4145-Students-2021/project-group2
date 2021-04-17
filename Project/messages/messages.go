@@ -29,7 +29,7 @@ type LampUpdate_message struct {
 type HallOrder struct {
 	HasOrder   bool
 	Floor      int
-	Direction  int //up = 0, down = 1
+	Direction  ButtonType_msg //up = 0, down = 1
 	VersionNum int
 	Costs      [config.NumElevators]int
 	TimeStamp  time.Time
@@ -38,8 +38,7 @@ type HallOrder struct {
 type ElevatorStatus struct {
 	ID           int
 	Pos          int
-	OrderList    [config.NumFloors*2 - 2]HallOrder //
-	Dir          int                               //up = 0, down = 1, stop = 2
+	OrderList    [config.NumFloors*2 - 2]HallOrder
 	IsOnline     bool
 	DoorOpen     bool
 	CabOrders    [config.NumFloors]bool
