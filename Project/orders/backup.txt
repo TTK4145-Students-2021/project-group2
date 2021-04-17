@@ -1,4 +1,0 @@
-Floor: 0 | CabOrderStatus: false
-Floor: 1 | CabOrderStatus: false
-Floor: 2 | CabOrderStatus: true
-Floor: 3 | CabOrderStatus: true

@@ -390,6 +390,9 @@ func RunOrders(chans OrderChannels) {
 	allElevators[config.ID].IsOnline = true
 	allElevators[config.ID].IsAvailable = true
 
+	backup := NewBackup("CabOrderBackup.txt")
+	backup.RecoverCabOrders(&allElevators[config.ID].CabOrders)
+
 	chans.AskElevatorForUpdate <- true
 	initFloor := <-chans.New_floor
 	initDoor := <-chans.Door_status
@@ -412,7 +415,7 @@ func RunOrders(chans OrderChannels) {
 			// 	updateOrderListCompleted(&allElevators, buttonEvent, &orderTimeOut) //This causes hall orders to get lost when it is at floor and hall order up and down is pressed
 			// }
 			fmt.Println("-> Status sendt: Buttonpress,", buttonEvent.Button)
-
+			go backup.SaveCabOrders(allElevators[config.ID].CabOrders)
 			go sendOutStatus(chans.Send_status, allElevators[config.ID])
 
 		case elevatorStatus := <-chans.Received_elevator_update: // new update
@@ -427,6 +430,7 @@ func RunOrders(chans OrderChannels) {
 		case floor := <-chans.New_floor:
 			updateElevatorStatusFloor(floor, &allElevators)
 			updateOrderListCompleted(&allElevators, assignedOrder, &orderTimeOut)
+			go backup.SaveCabOrders(allElevators[config.ID].CabOrders)
 			go sendOutStatus(chans.Send_status, allElevators[config.ID])
 			fmt.Println("-> Status sendt: New floor:", floor)
 
@@ -435,6 +439,7 @@ func RunOrders(chans OrderChannels) {
 			if isOpen == true {
 				// time.Sleep(time.Second * 3)
 				updateOrderListCompleted(&allElevators, assignedOrder, &orderTimeOut)
+				go backup.SaveCabOrders(allElevators[config.ID].CabOrders)
 
 			}
 			go sendOutStatus(chans.Send_status, allElevators[config.ID])

@@ -51,6 +51,8 @@ func NewBackup(filename string) *BackupFile {
 
 // RecoverCabOrders reads the file and updates a CabOrder-list
 func (bf *BackupFile) RecoverCabOrders(cabOrders *[config.NumFloors]bool) {
+	bf.mutex.Lock()
+	defer bf.mutex.Unlock()
 
 	file, err := os.Open(bf.Path)
 	if err != nil {
@@ -89,6 +91,9 @@ func (bf *BackupFile) SaveCabOrders(cabOrders [config.NumFloors]bool) {
 
 // WriteToFile writes a line to file.
 func (bf *BackupFile) WriteToFile(line string) {
+	bf.mutex.Lock()
+	defer bf.mutex.Unlock()
+
 	f, err := os.OpenFile(bf.Path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		panic(err)
@@ -102,6 +107,9 @@ func (bf *BackupFile) WriteToFile(line string) {
 
 // ClearFile clears the entire file
 func (bf *BackupFile) ClearFile() {
+	bf.mutex.Lock()
+	defer bf.mutex.Unlock()
+
 	f, err := os.Create(bf.Path)
 	if err != nil {
 		log.Fatalf("Failed creating file: %s", err)
@@ -111,6 +119,9 @@ func (bf *BackupFile) ClearFile() {
 
 // DeleteFile deletes the file
 func (bf *BackupFile) DeleteFile() {
+	bf.mutex.Lock()
+	defer bf.mutex.Unlock()
+
 	err := os.Remove(bf.Path)
 	if err != nil {
 		log.Fatal(err)
