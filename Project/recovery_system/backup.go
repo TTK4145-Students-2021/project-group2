@@ -1,48 +1,91 @@
 package recovery_system
 
+import (
+	"fmt"
+	"log"
+	"os"
+	"sync"
+)
+
+// Souces:
+// https://stackoverflow.com/questions/1821811/how-to-read-write-from-to-file-using-go
+// https://tutorialedge.net/golang/reading-writing-files-in-go/
+// https://www.golangprograms.com/how-to-read-write-from-to-file-in-golang.html
+
 // Backup containts all the necessary parameters for the backupsystem
-type Backup struct {
-	// TODO: Create all necessary struct parameters
-	// E.g. File?
+type BackupFile struct {
+	Path  string
+	mutex sync.Mutex
 }
 
-// NewBackup returns a new backupstruct
-func NewBackup() *Backup {
-	return &Backup{
-		//TODO:Initialize with proper parameters
+// NewBackup initializes and returns a new backupfile.
+// Creates a new file with the given filename if one does not exist
+func NewBackup(filename string) *BackupFile {
+
+	path := "./" + filename
+
+	file := &BackupFile{
+		Path: path,
+	}
+
+	// If file does not exist -> create file
+	if _, err := os.Stat(file.Path); err == nil {
+		fmt.Printf("File exists\n")
+	} else {
+		fmt.Printf("File does not exist\n")
+
+		f, err := os.Create(file.Path) // Truncates if file already exists, be careful!
+		if err != nil {
+			log.Fatalf("failed creating file: %s", err)
+		}
+		defer f.Close() // Make sure to close the file when you're done
+	}
+
+	return file
+}
+
+// RecoverFromBackup reads the file and updates a CabOrder-list
+func (bf *BackupFile) RecoverFromBackup( /*[config.NumFloors]CabOrders*/ ) {
+
+	// TODO: Implement functionality for returning everything from the recovery system
+
+}
+
+// WriteToBackup takes in a CabOrder-list and writes them to the backupfile
+func (bf *BackupFile) WriteToBackup( /*[config.NumFloors]CabOrders*/ ) {
+
+}
+
+// WriteToFile writes a line to file. Option to add a newLine automatically
+func (bf *BackupFile) WriteToFile(line string, newLine bool) {
+	if newLine {
+		line = line + "\n"
+	}
+
+	f, err := os.OpenFile(bf.Path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	if _, err = f.WriteString(line); err != nil {
+		panic(err)
 	}
 }
 
-// InitializeBackup initializes a new file with a given filename
-func (backup *Backup) InitializeBackup(filename string) {
-	// TODO: Set initializing parameters
-	// Potentially unite with the NewBackup function
-}
-
-// WriteToFile writes a line to file
-func (backup *Backup) WriteToFile(line string) {
-
-	// TODO: Implement functionality for writing line to file
-}
-
-// RecoverFromBackup reads the file and includes it in order
-func (backup *Backup) RecoverFromBackup() {
-
-	// TODO: Implement functionality for returning everything from the recovery system
-}
-
-/*
-* OTHER HELPER FUNCTIONS
- */
-
 // ClearFile clears the entire file
-func (backup *Backup) ClearFile() {
-
-	// TODO: Clear content of file, but leave it intact?
+func (bf *BackupFile) ClearFile() {
+	f, err := os.Create(bf.Path)
+	if err != nil {
+		log.Fatalf("Failed creating file: %s", err)
+	}
+	defer f.Close()
 }
 
 // DeleteFile deletes the file
-func (backup *Backup) DeleteFile() {
-
-	// TODO: Delete file
+func (bf *BackupFile) DeleteFile() {
+	err := os.Remove(bf.Path)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
