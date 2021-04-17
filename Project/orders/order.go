@@ -389,7 +389,6 @@ func checkIfEngineFails(assignedFloor int, status *messages.ElevatorStatus, send
 	lastPos := -1
 	for assignedFloor != -1 {
 		curPos = status.Pos
-		fmt.Println(curPos)
 		if curPos == assignedFloor {
 			return
 		}
