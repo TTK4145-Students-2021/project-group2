@@ -122,7 +122,6 @@ func updateOrderListButton(btnEvent messages.ButtonEvent_message, thisElevator *
 
 	} else { //TODO remove placeInList or look at OrderList's structure
 		idx := floorToOrderListIdx(btnEvent.Floor, btnEvent.Button)
-
 		if thisElevator.OrderList[idx].HasOrder == false {
 			thisElevator.OrderList[idx].HasOrder = true
 			thisElevator.OrderList[idx].VersionNum += 1
@@ -256,9 +255,11 @@ func orderListIdxToFloor(idx int) int {
 }
 
 func floorToOrderListIdx(floor int, dir messages.ButtonType_msg) int {
-	if dir == messages.BT_HallDown {
+	if dir == messages.BT_HallUp {
+		// fmt.Println("DOWN")
 		return floor
 	} else {
+		// fmt.Println("UP:", floor + config.NumFloors - 2)
 		return floor + config.NumFloors - 2
 	}
 }
@@ -306,51 +307,24 @@ func updateOrderListOther(incomingStatus messages.ElevatorStatus, list *[config.
 	}
 }
 
-func updateOrderListCompleted(list *[config.NumElevators]messages.ElevatorStatus, assignedOrder ButtonEvent_message) {
+func updateOrderListCompleted(list *[config.NumElevators]messages.ElevatorStatus, assignedOrder ButtonEvent_message, orderTimeOut *time.Time) {
 	curFloor := list[config.ID].Pos
 
 	// checks if the elevator has a cab call for the current floor
 	if list[config.ID].CabOrders[curFloor] == true && list[config.ID].DoorOpen == true {
 		list[config.ID].CabOrders[curFloor] = false
+		*orderTimeOut = time.Now()
 		return
-	}
-
-	//Note: this foorloop is here beacuse you have to check both up and down for the same floor, which are stored in diffrent paces in the list
-	// TODO: remove this for loop
-	if curFloor == 0 && curFloor == config.NumFloors-1 {
-
-	} else {
-
 	}
 
 	orderIdx := floorToOrderListIdx(assignedOrder.Floor, assignedOrder.Button)
 
-	if list[config.ID].OrderList[orderIdx].HasOrder {
+	if list[config.ID].OrderList[orderIdx].HasOrder && list[config.ID].OrderList[orderIdx].Floor == curFloor {
 		list[config.ID].OrderList[orderIdx].HasOrder = false
 		list[config.ID].OrderList[orderIdx].VersionNum += 1
+		*orderTimeOut = time.Now()
+		fmt.Println("Hall order compleete:", orderListIdxToFloor(orderIdx))
 	}
-
-	// for i := 0; i < len(list[config.ID].OrderList); i++ {
-	// 	// Algorithm for compleeting hall orders
-	// 	// 1. Remove ONLY one hall order when opening door at correct floor
-	// 	// 2. Start timer
-	// 	// 2.1 If no cab order is placed within timeout -> comlete other hall order on current floor
-
-	// 	// only compleete order when door opens
-	// 	// Except når døra er åpen og det kommer et button press i etasjen du er i
-
-	// 	// Så lenge du har cab orders kan du IKKE fjerne hall orders
-
-	// 	// GoToFloor lagrer også retning på oppdraget den tar på seg slik at heisen vet hvilket oppdrag den skal fjerne
-
-	// 	//checks if ther is a hall call at the current floor
-
-	// 	if list[config.ID].OrderList[i].HasOrder && list[config.ID].OrderList[i].Floor == curFloor && list[config.ID].DoorOpen == true {
-	// 		list[config.ID].OrderList[i].HasOrder = false
-	// 		list[config.ID].OrderList[i].VersionNum += 1
-	// 		break
-	// 	}
-	// }
 }
 
 func sendOutLightsUpdate(sendLampUpdate chan<- messages.LampUpdate_message, status *messages.ElevatorStatus) {
@@ -381,12 +355,12 @@ func checkIfElevatorOffline(allElevators *[config.NumElevators]messages.Elevator
 	for elevID := range allElevators {
 		if time.Since(allElevators[elevID].Timestamp) > config.OfflineTimeout && elevID != config.ID {
 			if allElevators[elevID].IsOnline == true {
-				fmt.Printf("[-] Elevator offline ID: %02d\n", elevID) // For debugging purposes. Detect change in online status
+				fmt.Printf("[-] Elevator offline ID: %02d\n", elevID)
 			}
 			allElevators[elevID].IsOnline = false
 		} else {
 			if allElevators[elevID].IsOnline == false {
-				fmt.Printf("[+] Elevator online ID: %02d\n", elevID) // For debugging purposes. Detect change in online status
+				fmt.Printf("[+] Elevator online ID: %02d\n", elevID)
 			}
 			allElevators[elevID].IsOnline = true
 		}
@@ -415,6 +389,7 @@ func RunOrders(chans OrderChannels) {
 	allElevators := initAllElevatorStatuses()
 	allElevators[config.ID].IsOnline = true
 	allElevators[config.ID].IsAvailable = true
+
 	chans.AskElevatorForUpdate <- true
 	initFloor := <-chans.New_floor
 	initDoor := <-chans.Door_status
@@ -423,8 +398,9 @@ func RunOrders(chans OrderChannels) {
 	allElevators[config.ID].DoorOpen = initDoor
 	assignedOrder := ButtonEvent_message{-1, messages.UNDEFINED}
 
-	//go contSend(send_status , &allElevators)
+	orderTimeOut := time.Now().Add(-time.Hour)
 
+	go contSend(chans.Send_status, &allElevators)
 	go sendOutLightsUpdate(chans.UpdateLampMessage, &allElevators[config.ID])
 
 	for {
@@ -432,9 +408,9 @@ func RunOrders(chans OrderChannels) {
 		case buttonEvent := <-chans.Button_press:
 			fmt.Println("--------Button pressed------")
 			updateOrderListButton(buttonEvent, &allElevators[config.ID])
-			if buttonEvent.Floor == allElevators[config.ID].Pos {
-				updateOrderListCompleted(&allElevators, buttonEvent) //This causes hall orders to get lost when it is at floor and hall order up and down is pressed
-			}
+			// if buttonEvent.Floor == allElevators[config.ID].Pos && time.Since(orderTimeOut) > config.OrderTimeOut{
+			// 	updateOrderListCompleted(&allElevators, buttonEvent, &orderTimeOut) //This causes hall orders to get lost when it is at floor and hall order up and down is pressed
+			// }
 			fmt.Println("-> Status sendt: Buttonpress,", buttonEvent.Button)
 
 			go sendOutStatus(chans.Send_status, allElevators[config.ID])
@@ -445,50 +421,55 @@ func RunOrders(chans OrderChannels) {
 			if elevatorStatus.ID != config.ID {
 				updateOtherElev(elevatorStatus, &allElevators)
 				updateOrderListOther(elevatorStatus, &allElevators)
-				fmt.Println("<- Recived status")
+				// fmt.Println("<- Recived status")
 			}
 
 		case floor := <-chans.New_floor:
 			updateElevatorStatusFloor(floor, &allElevators)
-			//updateOrderListCompleted(&allElevators)
+			updateOrderListCompleted(&allElevators, assignedOrder, &orderTimeOut)
 			go sendOutStatus(chans.Send_status, allElevators[config.ID])
 			fmt.Println("-> Status sendt: New floor:", floor)
 
 		case isOpen := <-chans.Door_status:
 			updateElevatorStatusDoor(isOpen, &allElevators)
 			if isOpen == true {
-				time.Sleep(time.Second * 3)
-				updateOrderListCompleted(&allElevators, assignedOrder)
+				// time.Sleep(time.Second * 3)
+				updateOrderListCompleted(&allElevators, assignedOrder, &orderTimeOut)
 
 			}
 			go sendOutStatus(chans.Send_status, allElevators[config.ID])
 			fmt.Println("-> Status sendt: Door: ", isOpen)
-			/*
-				case <-time.After(config.BcastIntervall):
-					go sendOutStatus(send_status, allElevators)
-			*/
+
 		case IsObstructed := <-chans.DoorObstructed:
 			allElevators[config.ID].IsObstructed = IsObstructed //TODO burde denne abstraheres ut i en egen funksjon
 			go sendOutStatus(chans.Send_status, allElevators[config.ID])
+
+		case <-time.After(500 * time.Millisecond):
 		}
 
 		// allElevators[config.ID].IsAvailable = true
-
 		newAssignedOrder := goToFloor(&allElevators)
-		printElevatorStatus(allElevators[config.ID])
-
-		if newAssignedOrder.Floor != -1 && assignedOrder.Floor != newAssignedOrder.Floor && allElevators[config.ID].DoorOpen && !allElevators[config.ID].IsObstructed {
+		// printElevatorStatus(allElevators[config.ID])
+		if newAssignedOrder != assignedOrder {
 			assignedOrder = newAssignedOrder
+		}
+
+		if assignedOrder.Floor != -1 && allElevators[config.ID].DoorOpen && !allElevators[config.ID].IsObstructed && time.Since(orderTimeOut) > config.OrderTimeOut {
+			// assignedOrder = newAssignedOrder
 			//fmt.Println("Sending out order:", assignedFloor)
+			// assignedOrder = newAssignedOrder
+
 			go sendingElevatorToFloor(chans.Go_to_floor, assignedOrder.Floor)
 
 			if assignedOrder.Floor == allElevators[config.ID].Pos {
-				updateOrderListCompleted(&allElevators, assignedOrder)
+				updateOrderListCompleted(&allElevators, assignedOrder, &orderTimeOut)
 			}
 			//allElevators[config.ID].IsAvailable = false
 			//printElevatorStatus(allElevators[config.ID])
 			go sendOutStatus(chans.Send_status, allElevators[config.ID])
 			fmt.Println("-> Status sendt: Go to floor ", assignedOrder.Floor)
+			printElevatorStatus(allElevators[config.ID])
+
 		}
 
 		checkIfElevatorOffline(&allElevators)
@@ -503,7 +484,8 @@ func printOrderList(list [config.NumFloors*2 - 2]messages.HallOrder) {
 }
 
 func printElevatorStatus(status messages.ElevatorStatus) {
-	fmt.Println("ID: ", status.ID, " |Currentfloor: ", status.Pos, "|CabOrders ", status.CabOrders, "| Door open: ", status.DoorOpen, "|avaliable: ", status.IsAvailable, status.IsOnline, status.IsObstructed)
+	fmt.Println("ID:", status.ID, " |Currentfloor:", status.Pos, "| Door open:", status.DoorOpen, "|avaliable:", status.IsAvailable, "|isOnline:", status.IsOnline, "|isObstructed:", status.IsObstructed, "\nCabOrders:", status.CabOrders)
+
 	printOrderList(status.OrderList)
 	fmt.Println("-----------------------------------------------")
 }
