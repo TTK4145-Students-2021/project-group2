@@ -389,6 +389,7 @@ func RunOrders(chans OrderChannels) {
 	allElevators := initAllElevatorStatuses()
 	allElevators[config.ID].IsOnline = true
 	allElevators[config.ID].IsAvailable = true
+
 	chans.AskElevatorForUpdate <- true
 	initFloor := <-chans.New_floor
 	initDoor := <-chans.Door_status
