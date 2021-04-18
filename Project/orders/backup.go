@@ -12,12 +12,7 @@ import (
 	"../config"
 )
 
-// Souces:
-// https://stackoverflow.com/questions/1821811/how-to-read-write-from-to-file-using-go
-// https://tutorialedge.net/golang/reading-writing-files-in-go/
-// https://www.golangprograms.com/how-to-read-write-from-to-file-in-golang.html
-
-// Backup containts all the necessary parameters for the backupsystem
+// BackupFile containts all the necessary parameters for the backupsystem
 type BackupFile struct {
 	Path  string
 	mutex sync.Mutex
@@ -26,9 +21,7 @@ type BackupFile struct {
 // NewBackup initializes and returns a new backupfile.
 // Creates a new file with the given filename if one does not exist
 func NewBackup(filename string) *BackupFile {
-
 	path := "./" + filename
-
 	file := &BackupFile{
 		Path: path,
 	}
@@ -38,7 +31,6 @@ func NewBackup(filename string) *BackupFile {
 		fmt.Printf("File exists\n")
 	} else {
 		fmt.Printf("File does not exist\n")
-
 		f, err := os.Create(file.Path) // Truncates if file already exists, be careful!
 		if err != nil {
 			log.Fatalf("failed creating file: %s", err)
