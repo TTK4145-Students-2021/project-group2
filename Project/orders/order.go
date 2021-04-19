@@ -416,7 +416,7 @@ func RunOrders(chans OrderChannels) {
 	allElevators[config.ID].IsOnline = true
 	allElevators[config.ID].IsAvailable = true
 
-	backup := NewBackup("CabOrderBackup.txt")
+	backup := NewBackup("CabOrderBackup.txt", config.ID)
 	backup.RecoverCabOrders(&allElevators[config.ID].CabOrders)
 
 	chans.AskElevatorForUpdate <- true

@@ -14,14 +14,15 @@ import (
 
 // BackupFile containts all the necessary parameters for the backupsystem
 type BackupFile struct {
+	ID    int
 	Path  string
 	mutex sync.Mutex
 }
 
 // NewBackup initializes and returns a new backupfile.
 // Creates a new file with the given filename if one does not exist
-func NewBackup(filename string) *BackupFile {
-	path := "./" + filename
+func NewBackup(filename string, elevatorID int) *BackupFile {
+	path := "./ID" + strconv.Itoa(elevatorID) + "_" + filename
 	file := &BackupFile{
 		Path: path,
 	}
