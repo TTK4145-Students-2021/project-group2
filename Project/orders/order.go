@@ -20,6 +20,7 @@ const orderListLength = numFloors*2 - 2
 const numElevators = config.NumElevators
 const numFloors = config.NumFloors
 const curID = config.ID
+const checkOfflineIntervall = config.CheckOfflineIntervall
 
 const UNDEFINED = messages.UNDEFINED
 const BT_HallUp = messages.BT_HallUp
@@ -142,6 +143,7 @@ func checkIfElevatorOffline(allElevatorSatuses *[numElevators]ElevatorStatus) {
 				allElevatorSatuses[elevID].IsOnline = true
 			}
 		}
+		time.Sleep(checkOfflineIntervall)
 	}
 }
 
