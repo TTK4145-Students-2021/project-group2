@@ -21,10 +21,9 @@ import (
 /*=============================================================================
 */
 
-const _floorPollRate = time.Millisecond * 20
-const _obstrPollRate = time.Millisecond * 20
 const _doorOpenSimulationTime = time.Millisecond * 500
-const NoFloor int = -1
+
+const NoFloor = -1
 
 // Types for defining possible States and Events
 type StateType string

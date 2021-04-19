@@ -1,9 +1,9 @@
 package messages
 
 import (
-	"time"
+	// "time"
 
-	"../config"
+	// "../config"
 )
 
 type ButtonType int
@@ -20,32 +20,33 @@ type ButtonEvent struct {
 	Button ButtonType
 }
 
-type LampUpdate_message struct {
+type LampUpdate struct {
 	Floor  int
 	Button ButtonType
 	Turn   bool
 }
 
-type HallOrder struct {
-	HasOrder   bool
-	Floor      int
-	Direction  ButtonType //up = 0, down = 1
-	VersionNum int
-	Costs      [config.NumElevators]int
-	TimeStamp  time.Time
-}
+// type HallOrder struct {
+// 	HasOrder   bool
+// 	Floor      int
+// 	Direction  ButtonType //up = 0, down = 1
+// 	VersionNum int
+// 	Costs      [config.NumElevators]int
+// 	TimeStamp  time.Time
+// }
 
-type OrderList [config.OrderListLength] HallOrder
+// type OrderList [config.OrderListLength] HallOrder
 
 
-type ElevatorStatus struct {
-	ID           int
-	Pos          int
-	OrderList    OrderList
-	IsOnline     bool
-	DoorOpen     bool
-	CabOrders    [config.NumFloors]bool
-	IsAvailable  bool
-	IsObstructed bool
-	Timestamp    time.Time
-}
+// type ElevatorStatus struct {
+// 	ID           int
+// 	Pos          int
+// 	OrderList    OrderList
+// 	IsOnline     bool
+// 	DoorOpen     bool
+// 	CabOrders    [config.NumFloors]bool
+// 	IsAvailable  bool
+// 	IsObstructed bool
+// 	TimeOfLastCompletion time.Time 
+// 	lastAlive    time.Time
+// }

@@ -1,29 +1,32 @@
 package orderDistribution
 
 import(
-	"../messages"
+	"fmt"
+	"time"
 )
 
-type AllElevatorStatuses [numElevators]messages.ElevatorStatus //numElevators går ikke her
+type AllElevatorStatuses [_numElevators]ElevatorStatus //numElevators går ikke her
 
-func (aes *AllElevatorStatuses) initAllStatuses() {
+func (aes *AllElevatorStatuses) init() {
 
-	CabOrders := [numFloors]bool{false}
+	CabOrders := [_numFloors]bool{false}
 	OrderList := &OrderList{}
 	OrderList.init()
 
-	for elevID := 0; elevID < (numElevators); i++ {
+	for elevID := 0; elevID < (_numElevators); elevID++ {
 		Status := ElevatorStatus{
 			ID:           elevID,
 			Pos:          1,
-			OrderList:    OrderList,
-			IsOnline:     false, //NB isOline is deafult false
+			OrderList:    *OrderList,
+			IsOnline:     false, 
 			DoorOpen:     false,
 			CabOrders:    CabOrders,
-			IsAvailable:  false, //NB isAvaliable is deafult false
+			IsAvailable:  false, 
 			IsObstructed: false,
+			// TimeOfLastCompletion: time.Now().Add(-time.Hour),
+			// LastAlive:	   time.Now(),
 		}
-		aes[i] = Status
+		aes[elevID] = Status
 	}
 }
 
@@ -32,23 +35,23 @@ func (aes *AllElevatorStatuses) update(incomingStatus ElevatorStatus) {
 	aes[incomingStatus.ID] = incomingStatus
 }
 
-func (aes *Eleva) initStatus(chans OrderChannels){
+func (aes *AllElevatorStatuses) initStatus(chans OrderChannels){
 	
-	allElevatorSatuses[curID].IsOnline = true
-	allElevatorSatuses[curID].IsAvailable = true
+	aes[_thisID].IsOnline = true
+	aes[_thisID].IsAvailable = true
 
-	chans.Get_init_position <- true
-	initFloor := <-chans.New_floor
-	initDoor := <-chans.Door_status
+	chans.RequestElevatorStatus <- true
+	initFloor := <-chans.NewFloor
+	initDoor := <-chans.DoorOpen
 
-	allElevatorSatuses[curID].Pos = initFloor
-	allElevatorSatuses[curID].DoorOpen = initDoor
+	aes[_thisID].Pos = initFloor
+	aes[_thisID].DoorOpen = initDoor
 }
 
 func (aes *AllElevatorStatuses) checkIfElevatorOffline() {
 	for{
 		for elevID := range aes {
-			if time.Since(aes[elevID].Timestamp) > config.OfflineTimeout && elevID != curID {
+			if time.Since(aes[elevID].LastAlive) > _offlineTimeout && elevID != _thisID {
 				if aes[elevID].IsOnline == true {
 					fmt.Printf("[-] Elevator offline ID: %02d\n", elevID)
 				}
@@ -60,31 +63,6 @@ func (aes *AllElevatorStatuses) checkIfElevatorOffline() {
 				aes[elevID].IsOnline = true
 			}
 		}
-		time.Sleep(checkOfflineIntervall)
-	}
-}
-
-func (aes *AllElevatorStatuses)updateOrderListCompleted(assignedOrder ButtonEvent, orderTimeOut *time.Time) {
-	curFloor := list[curID].Pos
-
-	//TODO CLEAN CODE ANNNND LOGIC
-
-	// checks if the elevator has a cab call for the current floor
-	if aes[curID].CabOrders[curFloor] == true && aes[curID].DoorOpen == true && assignedOrder.Floor==curFloor {
-		aes[curID].CabOrders[curFloor] = false
-		*orderTimeOut = time.Now()
-		return
-	}
-
-	orderIdx := floorToOrderListIdx(assignedOrder.Floor, assignedOrder.Button)
-	if orderIdx == -1{
-		return
-	}
-
-	if aes[curID].OrderList[orderIdx].HasOrder && aes[curID].OrderList[orderIdx].Floor == curFloor {
-		aes[curID].OrderList[orderIdx].HasOrder = false
-		aes[curID].OrderList[orderIdx].VersionNum += 1
-		*orderTimeOut = time.Now()
-		// fmt.Println("Hall order compleete:", orderListIdxToFloor(orderIdx))
+		time.Sleep(_checkOfflineIntervall)
 	}
 }

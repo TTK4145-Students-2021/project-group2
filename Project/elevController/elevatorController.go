@@ -20,7 +20,10 @@ import (
 /*=============================================================================
 */
 
-const _ctrPollRate = 20 * time.Millisecond
+const _doorPollRate  = 20 * time.Millisecond
+const _floorPollRate = 20 * time.Millisecond
+const _obstrPollRate = 20 * time.Millisecond
+
 
 // All channels that needs to be passed during initialization
 type ControllerChannels struct {
@@ -76,11 +79,11 @@ func (ctr *Controller) Run() error {
 	// Start elevator driver routines
 	go PollButtons(drv_buttons)
 	go PollFloorSensor(drv_floors)
-	// Start routines for communication with external modules
+
+	// Routines for communication with order module
 	go ctr.pollDoorOpen(elev)
 	go ctr.pollElevFloor(elev)
 	go ctr.pollDoorObstructed(elev)
-	//go ctr.ReceiveLampUpdates()
 
 	ctr.Channels.ControllerReady <- true
 
@@ -88,8 +91,6 @@ func (ctr *Controller) Run() error {
 	for {
 		select {
 		case a := <-drv_buttons:
-			fmt.Println("Button press registered")
-			fmt.Printf("%+v\n", a)
 			message := messages.ButtonEvent{
 				Floor:  a.Floor,
 				Button: messages.ButtonType(a.Button),
@@ -97,8 +98,6 @@ func (ctr *Controller) Run() error {
 			channels.RedirectButtonAction <- message
 
 		case a := <-channels.ReceiveOrder:
-			fmt.Printf("New order received\n")
-			fmt.Printf("Target floor: %v\n", a)
 			go elev.GotoFloor(a)
 
 		case a := <-channels.ReceiveLampUpdate:
@@ -112,6 +111,7 @@ func (ctr *Controller) Run() error {
 	}
 }
 
+// TODO: INTEGRER FUNKSJON RETT I KODE
 func handleLampUpdate(message messages.LampUpdate) {
 	SetButtonLamp(ButtonType(message.Button), message.Floor, message.Turn)
 }
@@ -124,12 +124,12 @@ func (ctr *Controller) SendElevatorStatus() {
 	ctr.Channels.CurrentFloor <- ctr.Elev.CurrentFloor
 }
 
-// pollDoorOpen sends update to listener if door opens or closes
+// Sends update to listener if door opens or closes
 func (ctr *Controller) pollDoorOpen(elev *ElevatorMachine) {
 	prev := elev.Available
 	ctr.Channels.DoorOpen <- prev
 	for {
-		time.Sleep(_ctrPollRate)
+		time.Sleep(_doorPollRate)
 		v := ctr.Elev.Available
 
 		if v != prev {
@@ -139,12 +139,12 @@ func (ctr *Controller) pollDoorOpen(elev *ElevatorMachine) {
 	}
 }
 
-// pollElevFloor sends update to listener if elevator enters new floor
+// Sends update to listener if elevator enters new floor
 func (ctr *Controller) pollElevFloor(elev *ElevatorMachine) {
 	prev := elev.CurrentFloor
 	ctr.Channels.CurrentFloor <- prev
 	for {
-		time.Sleep(_ctrPollRate)
+		time.Sleep(_floorPollRate)
 		v := GetFloor()
 		if v != prev && v != -1 {
 			SetFloorIndicator(v)
@@ -154,12 +154,12 @@ func (ctr *Controller) pollElevFloor(elev *ElevatorMachine) {
 	}
 }
 
-// pollDoorObstructed sends update to listener if elevator door is obstructed
+// Sends update to listener if elevator door is obstructed
 func (ctr *Controller) pollDoorObstructed(elev *ElevatorMachine) {
 	prev := GetObstruction()
 	ctr.Channels.DoorObstructed <- prev
 	for {
-		time.Sleep(_ctrPollRate)
+		time.Sleep(_obstrPollRate)
 		v := GetObstruction()
 		if v != prev {
 			ctr.Channels.DoorObstructed <- v
@@ -178,9 +178,7 @@ func (ctr *Controller) pollDoorObstructed(elev *ElevatorMachine) {
 
 // Initialize an elevator
 func (elev *ElevatorMachine) Initialize(elevChans ElevChannels) error {
-	initCtx := &InitContext{
-		Channels: elevChans,
-	}
+	initCtx := &InitContext{Channels: elevChans,}
 	err := elev.SendEvent(Initialize, initCtx)
 	if err != nil {
 		return err
@@ -188,6 +186,7 @@ func (elev *ElevatorMachine) Initialize(elevChans ElevChannels) error {
 	return nil
 }
 
+// Send execution order to elevator
 func (elev *ElevatorMachine) GotoFloor(targetFloor int) error {
 
 	fmt.Println("GotoFloor called")
@@ -196,15 +195,9 @@ func (elev *ElevatorMachine) GotoFloor(targetFloor int) error {
 		return ErrElevUnavailable
 	}
 
-	moveCtx := &MoveContext{
-		TargetFloor: targetFloor,
-	}
-
-	fmt.Println("Sending order event to elevator\n")
+	moveCtx := &MoveContext{TargetFloor: targetFloor,}
 	err := elev.SendEvent(Move, moveCtx)
 	if err != nil {
-		fmt.Println("Failed to send order to elevator")
-		// Return any other errors
 		return err
 	}
 	return nil

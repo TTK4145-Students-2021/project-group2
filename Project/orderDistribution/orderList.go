@@ -1,7 +1,21 @@
 package orderDistribution
 
-	
-func (ol *OrderList) update(incomingOrderList OrderList)
+import (
+	"time"
+)
+
+type OrderList [_orderListLength] HallOrder	
+
+type HallOrder struct {
+	HasOrder   bool
+	Floor      int
+	Direction  ButtonType //up = 0, down = 1
+	VersionNum int
+	Costs      [_numElevators]int
+	TimeStamp  time.Time
+}
+
+func (ol *OrderList) update(incomingOrderList OrderList){
 
 	for i,curOrder := range ol {
 		/*
@@ -15,7 +29,7 @@ func (ol *OrderList) update(incomingOrderList OrderList)
 		*/
 		// this if statement checks if the order should be updated and updates it
 		incomingOrder := incomingOrderList[i]
-		if incomingOrderIsNewer(incomingOrder.VersionNum, curOrder.VersionNum){
+		if incomingOrder.VersionNum > curOrder.VersionNum {
 			curOrder.HasOrder = incomingOrder.HasOrder
 			curOrder.VersionNum = incomingOrder.VersionNum
 		}
@@ -23,12 +37,10 @@ func (ol *OrderList) update(incomingOrderList OrderList)
 }
 	
 func (ol *OrderList) init() {
-	ol := [orderListLength]HallOrder{}
-
 	// initalizing HallUp Orders
-	initialCosts := [numElevators]int{10000}
+	initialCosts := [_numElevators]int{10000}
 
-	for idx := 0; idx < orderListLength; idx ++{
+	for idx := 0; idx < _orderListLength; idx ++{
 		ol[idx] = HallOrder{
 			HasOrder:   false,
 			Floor:      orderListIdxToFloor(idx),
@@ -41,12 +53,12 @@ func (ol *OrderList) init() {
 }
 
 
-func (ol *OrderList) calculateAllCosts()  {
+func (ol *OrderList) calculateAllCosts(allElevatorStatuses AllElevatorStatuses)  {
 	for idx,_ := range ol{
 		curOrder := &ol[idx]
 		if ol[idx].HasOrder{
-			for _, curElevator := range allElevatorSatuses{
-				cost := costFunction(curElevator, curOrder.Floor, curOrder.TimeStamp)
+			for _, curElevator := range allElevatorStatuses{
+				cost := curElevator.costFunction(curOrder.Floor, curOrder.TimeStamp)
 				curOrder.Costs[curElevator.ID] = cost
 			}
 		} else {
@@ -57,3 +69,5 @@ func (ol *OrderList) calculateAllCosts()  {
 		
 	}
 }
+
+
