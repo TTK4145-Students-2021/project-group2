@@ -3,14 +3,14 @@ package config
 import (
 	"fmt"
 	"os"
-	"strconv"
+	// "strconv"
 	"time"
 )
 
 //Package for common variables to be defined across the application
 var Port string
 
-var ID int //the order module is written so that this is the first elevator. (i.e it has -1 in all indexes)
+const ID int = 2 //the order module is written so that this is the first elevator. (i.e it has -1 in all indexes)
 const NumFloors int = 4
 const BottomFloor int = 0
 
@@ -36,12 +36,12 @@ const MaxInt = int(MaxUint >> 1)
 const MinInt = -MaxInt - 1
 
 func InitConfig() {
-	if len(os.Args) < 2 {
+	if len(os.Args) < 1 {
 		SimPort = "15657"
-		ID = 0
+		// ID = 0
 	} else {
 		SimPort = os.Args[1]
-		ID, _ = strconv.Atoi(os.Args[2])
+		// ID, _ = strconv.Atoi(os.Args[2])
 	}
 	fmt.Println("SimPort:", SimPort, "\tID: ", ID)
 }
