@@ -19,7 +19,7 @@ type LampUpdate_message = messages.LampUpdate_message
 const orderListLength = numFloors*2 - 2
 const numElevators = config.NumElevators
 const numFloors = config.NumFloors
-var curID = config.ID
+const curID = config.ID
 
 const UNDEFINED = messages.UNDEFINED
 const BT_HallUp = messages.BT_HallUp
@@ -128,17 +128,19 @@ func sendOutLightsUpdate(sendLampUpdate chan<- messages.LampUpdate_message, stat
 }
 
 func checkIfElevatorOffline(allElevatorSatuses *[numElevators]ElevatorStatus) {
-	for elevID := range allElevatorSatuses {
-		if time.Since(allElevatorSatuses[elevID].Timestamp) > config.OfflineTimeout && elevID != curID {
-			if allElevatorSatuses[elevID].IsOnline == true {
-				fmt.Printf("[-] Elevator offline ID: %02d\n", elevID)
+	for{
+		for elevID := range allElevatorSatuses {
+			if time.Since(allElevatorSatuses[elevID].Timestamp) > config.OfflineTimeout && elevID != curID {
+				if allElevatorSatuses[elevID].IsOnline == true {
+					fmt.Printf("[-] Elevator offline ID: %02d\n", elevID)
+				}
+				allElevatorSatuses[elevID].IsOnline = false
+			} else {
+				if allElevatorSatuses[elevID].IsOnline == false {
+					fmt.Printf("[+] Elevator online ID: %02d\n", elevID)
+				}
+				allElevatorSatuses[elevID].IsOnline = true
 			}
-			allElevatorSatuses[elevID].IsOnline = false
-		} else {
-			if allElevatorSatuses[elevID].IsOnline == false {
-				fmt.Printf("[+] Elevator online ID: %02d\n", elevID)
-			}
-			allElevatorSatuses[elevID].IsOnline = true
 		}
 	}
 }
@@ -202,6 +204,8 @@ func RunOrders(chans OrderChannels) {
 	go contSend(chans.Send_status, thisElevatorStatus)
 	//thread continuinling sending out this LampMessages to elevator module
 	go sendOutLightsUpdate(chans.UpdateLampMessage, thisElevatorStatus)
+	// Thread to check if elevators have gone offline or come back online
+	go checkIfElevatorOffline(&allElevatorSatuses)
 
 	for {
 		select {
@@ -259,7 +263,6 @@ func RunOrders(chans OrderChannels) {
 			}
 			//printElevatorStatus(allElevatorSatuses[curID])
 		}
-		checkIfElevatorOffline(&allElevatorSatuses)
 	}
 }
 
