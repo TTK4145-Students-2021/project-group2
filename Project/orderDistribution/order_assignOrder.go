@@ -1,4 +1,4 @@
-package orders
+package orderDistribution
 
 // this module chooses wich order the elevator should execute
 import (
@@ -14,7 +14,7 @@ const unAvailableCost = 4000
 const timePenaltyCost = -15
 
 // runs through the costFunction for all true orders
-func assignOrder(allElevatorSatuses *[numElevators]ElevatorStatus) ButtonEvent_message {
+func assignOrder(allElevatorSatuses *[numElevators]ElevatorStatus) ButtonEvent {
 	
 	calculateAllCosts(allElevatorSatuses)
 
@@ -32,9 +32,9 @@ func assignOrder(allElevatorSatuses *[numElevators]ElevatorStatus) ButtonEvent_m
 	return pickedOrder //return the floor that the elevator should go
 }
 
-func assignHallOrder(allElevatorSatuses *[numElevators]ElevatorStatus) ButtonEvent_message{
+func assignHallOrder(allElevatorSatuses *[numElevators]ElevatorStatus) ButtonEvent_{
 
-	pickedOrder := ButtonEvent_message{-1, -1} 
+	pickedOrder := ButtonEvent{-1, -1} 
 	orderList := allElevatorSatuses[curID].OrderList
 
 	// turning the costs into a matrix of [numElevators][orderListIdx]
@@ -54,7 +54,7 @@ func assignHallOrder(allElevatorSatuses *[numElevators]ElevatorStatus) ButtonEve
 		cost < lowestCost && 
 		orderList[orderIdx].HasOrder {
 			pickedOrder.Floor = orderListIdxToFloor(orderIdx)
-			pickedOrder.Button = ButtonType_msg(orderList[orderIdx].Direction)
+			pickedOrder.Button = ButtonType(orderList[orderIdx].Direction)
 			return pickedOrder
 		} else {
 			for i := range orderList {
@@ -68,9 +68,9 @@ func assignHallOrder(allElevatorSatuses *[numElevators]ElevatorStatus) ButtonEve
 	return pickedOrder
 }
 
-func assignCabOrder(cabOrders [numFloors]bool, curFloor int) ButtonEvent_message {
+func assignCabOrder(cabOrders [numFloors]bool, curFloor int) ButtonEvent {
 	//default pickedOrder
-	pickedOrder := ButtonEvent_message{-1, -1}
+	pickedOrder := ButtonEvent{-1, -1}
 
 	shortestDistance := numFloors + 1
 	for orderFloor, hasOrder := range cabOrders{

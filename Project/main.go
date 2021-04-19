@@ -7,10 +7,10 @@ import (
 	"fmt"
 
 	"./config"
-	"./elevator"
+	"./elevController"
 	"./messages"
 	"./network/bcast"
-	"./orders"
+	"./orderDistribution"
 )
 
 func main() {
@@ -23,12 +23,12 @@ func main() {
 	doorOpen := make(chan bool, 5)
 	doorObstructed := make(chan bool,5)
 	currentFloor := make(chan int, 10)                          //new  floor
-	buttonAction := make(chan messages.ButtonEvent_message, 10) //pressed button
+	buttonAction := make(chan messages.ButtonEvent, 10) //pressed button
 	order := make(chan int, 2)                                 // goTo floor
 	controllerReady := make(chan bool)                      // Check when controller is done
 	elevatorStatusTx := make(chan messages.ElevatorStatus)
 	elevatorStatusRx := make(chan messages.ElevatorStatus)
-	lampNotifications := make(chan messages.LampUpdate_message, 5)
+	lampNotifications := make(chan messages.LampUpdate, 5)
 
 	// Bundle controller channels in a struct
 	ctrChans := elevator.ControllerChannels{

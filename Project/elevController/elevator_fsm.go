@@ -1,4 +1,4 @@
-package elevator
+package elevController
 
 import (
 	"fmt"
@@ -26,10 +26,8 @@ const _obstrPollRate = time.Millisecond * 20
 const _doorOpenSimulationTime = time.Millisecond * 500
 const NoFloor int = -1
 
-// StateType is an extensible state type in the elevator
+// Types for defining possible States and Events
 type StateType string
-
-// EventType is an extensible event type in the elevator
 type EventType string
 
 const (
@@ -48,21 +46,21 @@ const (
 	ArriveAtFloor  EventType = "ArriveAtFloor"
 )
 
-// Action represents an action to be executed upon a state transition
+// Represents actions executed by ElevatorMachine upon a transition between states
 type Action interface {
 	Execute(elev *ElevatorMachine, eventCtx EventContext) EventType
-}
-
-// State binds a state with an action and a set of events it can handle in that given state
-type State struct {
-	Action Action
-	Events Events
 }
 
 // Events represents the mapping of events that can be performed in given states
 type Events map[EventType]StateType
 
-// States represents a mapping of states and their implementations
+// 
+type State struct {
+	Action Action
+	Events Events
+}
+
+// Creates a connection between StateType 
 type States map[StateType]State
 
 // ElevChannels contain all the channels needed for the elevator to work

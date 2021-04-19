@@ -1,26 +1,9 @@
-package orders
+package orderDistribution
 
 import (
 	"time"
 )
-func initOrderList() [orderListLength]HallOrder {
-	OrderList := [orderListLength]HallOrder{}
 
-	// initalizing HallUp Orders
-	initialCosts := [numElevators]int{10000}
-
-	for idx := 0; idx < orderListLength; idx ++{
-		OrderList[idx] = HallOrder{
-			HasOrder:   false,
-			Floor:      orderListIdxToFloor(idx),
-			Direction:  orderListIdxToBtnTyp(idx),
-			VersionNum: 0,
-			Costs:      initialCosts,
-			TimeStamp:  time.Now(),
-		}
-	}
-	return OrderList
-}
 
 func initAllElevatorStatuses() [numElevators]ElevatorStatus {
 

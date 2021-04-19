@@ -1,4 +1,4 @@
-package elevator
+package elevController
 
 import (
 	"fmt"
@@ -12,9 +12,9 @@ import (
  * @Description:
  * The Elevator Controller acts as an extension to an ElevatorMachine, working as
  * a broker between the input buttons, the order module and the physical machine.
- * It sets up and connects all the necessary communication channels in the way that
- * is needed for the modules to work together, redirecting inputs and outputs to their
- * intended destinations.
+ * It sets up and connects all the necessary communication channels needed for 
+ * the modules to work together, redirecting inputs and outputs to their intended 
+ * destinations.
  *
  * @Author: Eldar Sandanger
 /*=============================================================================
@@ -22,16 +22,16 @@ import (
 
 const _ctrPollRate = 20 * time.Millisecond
 
+// All channels that needs to be passed during initialization
 type ControllerChannels struct {
 	DoorOpen              chan<- bool
 	CurrentFloor          chan<- int
-	RedirectButtonAction  chan<- messages.ButtonEvent_message
+	RedirectButtonAction  chan<- messages.ButtonEvent
 	ReceiveOrder          <-chan int
-	RespondOrder          chan<- error
 	ElevatorUpdateRequest <-chan bool
 	ControllerReady       chan<- bool
 	DoorObstructed        chan<- bool
-	ReceiveLampUpdate     <-chan messages.LampUpdate_message
+	ReceiveLampUpdate     <-chan messages.LampUpdate
 }
 
 type Controller struct {
@@ -90,9 +90,9 @@ func (ctr *Controller) Run() error {
 		case a := <-drv_buttons:
 			fmt.Println("Button press registered")
 			fmt.Printf("%+v\n", a)
-			message := messages.ButtonEvent_message{
+			message := messages.ButtonEvent{
 				Floor:  a.Floor,
-				Button: messages.ButtonType_msg(a.Button),
+				Button: messages.ButtonType(a.Button),
 			}
 			channels.RedirectButtonAction <- message
 
@@ -112,7 +112,7 @@ func (ctr *Controller) Run() error {
 	}
 }
 
-func handleLampUpdate(message messages.LampUpdate_message) {
+func handleLampUpdate(message messages.LampUpdate) {
 	SetButtonLamp(ButtonType(message.Button), message.Floor, message.Turn)
 }
 
