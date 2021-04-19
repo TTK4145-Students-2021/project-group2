@@ -10,14 +10,14 @@ type AllElevatorStatuses [_numElevators]ElevatorStatus //numElevators går ikke 
 func (aes *AllElevatorStatuses) init() {
 
 	CabOrders := [_numFloors]bool{false}
-	OrderList := &OrderList{}
-	OrderList.init()
-
+	
 	for elevID := 0; elevID < (_numElevators); elevID++ {
+		OrderList := &OrderList{}
+		OrderList.init()
 		Status := ElevatorStatus{
 			ID:           elevID,
 			Pos:          1,
-			OrderList:    *OrderList,
+			OrderList:    *OrderList, 
 			IsOnline:     false, 
 			DoorOpen:     false,
 			CabOrders:    CabOrders,

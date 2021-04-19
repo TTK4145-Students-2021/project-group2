@@ -5,6 +5,7 @@ import(
 	"../messages"
 	"errors"
 	"../config"
+	// "fmt"
 )
 
 type ElevatorStatus struct {
@@ -62,20 +63,20 @@ func (es *ElevatorStatus) checkEngineFailure(assignedFloor int, send_status chan
 	timeSinceMovment := 0
 	lastFloor := -1
 	for {
-		if es.Pos  == assignedFloor {
+		if es.Pos == assignedFloor {
 			return
 		}
 		if es.Pos != lastFloor {
 			lastFloor = es.Pos 
-			time.Sleep(time.Second * 1) // TODO: RETT DENNE
+			 // TODO: RETT DENNE
 		} else {
 			timeSinceMovment += 1
-			if timeSinceMovment > 10 {
+			if timeSinceMovment > engineFailureTimeOut {
 				err := errors.New("engine failure")
 				panic(err)
-				return
 			}
 		}
+		time.Sleep(time.Second)
 	}
 }
 
@@ -84,7 +85,15 @@ func (es *ElevatorStatus) broadcast(channel chan<- ElevatorStatus) {
 		time.Sleep(_bcastRate)
 		es.LastAlive = time.Now()
 		channel <- *es
+		printElevatorStatus(*es)
+		// fmt.Println("BCAST")
 	}
+}
+
+func (es *ElevatorStatus) broadcastOneTime(channel chan<- ElevatorStatus) {
+
+	es.LastAlive = time.Now()
+	channel <- *es
 }
 
 //updateOrderListButton

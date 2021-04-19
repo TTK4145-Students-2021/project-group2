@@ -32,6 +32,8 @@ const BT_HallUp = messages.BT_HallUp
 const BT_HallDown = messages.BT_HallDown
 const BT_Cab = messages.BT_Cab
 
+const engineFailureTimeOut = 10   //seconds
+
 
 type OrderChannels struct {
 	ButtonPress            	<-chan ButtonEvent 
@@ -51,7 +53,6 @@ func RunOrders(channels OrderChannels) {
 	// Initialize list of all 
 	allElevatorStatuses := &AllElevatorStatuses{}
 	allElevatorStatuses.init()
-	
 
 	// Default assignedOrder and executeOrder
 	assignedOrder := ButtonEvent{-1, messages.UNDEFINED}
@@ -63,7 +64,7 @@ func RunOrders(channels OrderChannels) {
 	
 	go thisElevatorStatus.broadcast(channels.SendStatus)
 	go thisElevatorStatus.sendOutLightsUpdate(channels.UpdateLampMessage)
-	go allElevatorStatuses.checkIfElevatorOffline()
+	//go allElevatorStatuses.checkIfElevatorOffline()
 
 	for {
 		select {
@@ -71,21 +72,24 @@ func RunOrders(channels OrderChannels) {
 			fmt.Println("--------Button pressed------")
 			thisElevatorStatus.updateOrders(buttonEvent)
 	
-			//go thisElevatorStatus.Broadcast(channels.Send_status)
+			//go thisElevatorStatus.broadcastOneTime(channels.SendStatus)
 
-		case incomingElevatorStatus := <-channels.ReceiveElevatorUpdate: // new update
+		case incomingElevatorStatus := <-channels.ReceiveElevatorUpdate:
 			// update own orderlist and otherElev with the incomming elevatorStatus     
-			
-			if thisElevatorStatus.ID != _thisID {
+			fmt.Println("<- RECEIVED STATUS", incomingElevatorStatus.ID)
+			if incomingElevatorStatus.ID != _thisID {
 				incomingOrderList := incomingElevatorStatus.OrderList
+				printElevatorStatus(incomingElevatorStatus)
 				thisOrderList.update(incomingOrderList)
 				allElevatorStatuses.update(incomingElevatorStatus)
+				
 			}
+			//go thisElevatorStatus.broadcastOneTime(channels.SendStatus)
 
 		case floor := <-channels.NewFloor:
 			thisElevatorStatus.updateFloor(floor)
 	
-			//go sendOutStatus(channels.Send_status, thisElevatorStatus])
+			//go thisElevatorStatus.broadcastOneTime(channels.SendStatus)
 			fmt.Println("-> Status sendt: New floor:", floor)
 			printElevatorStatus(allElevatorStatuses[_thisID])
 
@@ -96,16 +100,17 @@ func RunOrders(channels OrderChannels) {
 				thisElevatorStatus.updateOrderCompleted(assignedOrder)
 			
 			}
-			//go sendOutStatus(channels.Send_status, thisElevatorStatus)
+			//go thisElevatorStatus.broadcastOneTime(channels.SendStatus)
 			fmt.Println("-> Status sendt: Door: ", isOpen)
 			printElevatorStatus(allElevatorStatuses[_thisID])
 
 
 		case IsObstructed := <-channels.DoorObstructed:
 			allElevatorStatuses[_thisID].IsObstructed = IsObstructed //TODO burde denne abstraheres ut i en egen funksjon
-			//go sendOutStatus(channels.Send_status, thisElevatorStatus)
+			//go thisElevatorStatus.broadcastOneTime(channels.SendStatus)
 
 		case <-time.After(500 * time.Millisecond):
+			//go thisElevatorStatus.broadcastOneTime(channels.SendStatus)
 		}
 		
 		newAssignedOrder := assignOrder(allElevatorStatuses)
@@ -118,7 +123,7 @@ func RunOrders(channels OrderChannels) {
 				go sendingElevatorToFloor(channels.GotoFloor, assignedOrder.Floor)
 				//go thisElevatorStatus.sendOutStatus(channels.Send_status)
 				// fmt.Println("-> Status sendt: Go to floor ", assignedOrder.Floor)
-				go thisElevatorStatus.checkEngineFailure(assignedOrder.Floor, channels.SendStatus)
+				//go thisElevatorStatus.checkEngineFailure(assignedOrder.Floor, channels.SendStatus)
 				executeOrder = assignedOrder
 			}
 			if assignedOrder.Floor == allElevatorStatuses[_thisID].Pos {

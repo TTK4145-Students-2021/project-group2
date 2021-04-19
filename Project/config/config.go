@@ -9,7 +9,7 @@ import (
 //Package for common variables to be defined across the application
 var Port string
 
-const ID int = 0 //the order module is written so that this is the first elevator. (i.e it has -1 in all indexes)
+const ID int = 0//the order module is written so that this is the first elevator. (i.e it has -1 in all indexes)
 const NumFloors int = 4
 const BottomFloor int = 0
 
@@ -22,7 +22,6 @@ var NewFloor = make(chan int)
 var isDoorOpen = make(chan bool)
 
 const BcastPort int = 12345
-const PeersPort int = 54321
 const BcastIntervall time.Duration = 1000 * time.Millisecond
 
 const LampUpdateIntervall time.Duration = 100 * time.Millisecond

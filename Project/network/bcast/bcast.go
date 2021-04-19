@@ -62,6 +62,7 @@ func Receiver(port int, chans ...interface{}) {
 			Chan: reflect.ValueOf(ch),
 			Send: reflect.Indirect(v),
 		}})
+		fmt.Println("RECEIVED")
 	}
 }
 
