@@ -24,11 +24,12 @@ func orderListIdxToBtnTyp(idx int) ButtonType_msg {
 
 func floorToOrderListIdx(floor int, dir messages.ButtonType_msg) int {
 	if dir == messages.BT_HallUp {
-		// fmt.Println("DOWN")
 		return floor
-	} else {
-		// fmt.Println("UP:", floor + numFloors - 2)
+	} 
+	if dir == messages.BT_HallDown {
 		return floor + numFloors - 2
+	} else {
+		return -1
 	}
 }
 

@@ -145,10 +145,7 @@ func (ctr *Controller) pollElevFloor(elev *ElevatorMachine) {
 	ctr.Channels.CurrentFloor <- prev
 	for {
 		time.Sleep(_ctrPollRate)
-		elev.mutex.Lock()
-		v := ctr.Elev.CurrentFloor
-		elev.mutex.Unlock()
-
+		v := GetFloor()
 		if v != prev && v != -1 {
 			SetFloorIndicator(v)
 			ctr.Channels.CurrentFloor <- v

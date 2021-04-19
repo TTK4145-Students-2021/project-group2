@@ -40,6 +40,91 @@ type OrderChannels struct {
 	UpdateLampMessage        chan<- LampUpdate_message
 }
 
+func RunOrders(chans OrderChannels) {
+	fmt.Println("Order module initializing....")
+
+	allElevatorSatuses := initAllElevatorStatuses()
+	initThisElevatorStatus(&allElevatorSatuses, chans)
+
+	// Default assignedOrder and executeOrder
+	assignedOrder := ButtonEvent_message{-1, messages.UNDEFINED}
+	executeOrder := ButtonEvent_message{-1, messages.UNDEFINED}
+	// 
+	orderTimeOut := time.Now().Add(-time.Hour)
+
+	thisElevatorStatus := &allElevatorSatuses[curID]
+	//thread continuinling sending out this elevatorStatus to other elevators
+	go contSend(chans.Send_status, thisElevatorStatus)
+	//thread continuinling sending out this LampMessages to elevator module
+	go sendOutLightsUpdate(chans.UpdateLampMessage, thisElevatorStatus)
+	// Thread to check if elevators have gone offline or come back online
+	go checkIfElevatorOffline(&allElevatorSatuses)
+
+	for {
+		select {
+		case buttonEvent := <-chans.Button_press:
+			fmt.Println("--------Button pressed------")
+	
+			
+			updateOrderListButton(buttonEvent, &allElevatorSatuses[curID])
+			
+			// fmt.Println("-> Status sendt: Buttonpress,", buttonEvent.Button)
+
+			go sendOutStatus(chans.Send_status, allElevatorSatuses[curID])
+
+		case elevatorStatus := <-chans.Received_elevator_update: // new update
+			// update own orderlist and otherElev with the incomming elevatorStatus     
+
+			if elevatorStatus.ID != curID {
+				updateOtherElev(elevatorStatus, &allElevatorSatuses)
+				updateOrderListOther(elevatorStatus, &allElevatorSatuses)
+				// fmt.Println("<- Recived status")
+			}
+
+		case floor := <-chans.New_floor:
+			updateElevatorStatusFloor(floor, &allElevatorSatuses)
+			//updateOrderListCompleted(&allElevatorSatuses, assignedOrder, &orderTimeOut)
+			go sendOutStatus(chans.Send_status, allElevatorSatuses[curID])
+			fmt.Println("-> Status sendt: New floor:", floor)
+			printElevatorStatus(allElevatorSatuses[curID])
+
+
+		case isOpen := <-chans.Door_status:
+			updateElevatorStatusDoor(isOpen, &allElevatorSatuses)
+			if isOpen == true {
+				updateOrderListCompleted(&allElevatorSatuses, assignedOrder, &orderTimeOut)
+			}
+			go sendOutStatus(chans.Send_status, allElevatorSatuses[curID])
+			fmt.Println("-> Status sendt: Door: ", isOpen)
+			printElevatorStatus(allElevatorSatuses[curID])
+
+
+		case IsObstructed := <-chans.DoorObstructed:
+			allElevatorSatuses[curID].IsObstructed = IsObstructed //TODO burde denne abstraheres ut i en egen funksjon
+			go sendOutStatus(chans.Send_status, allElevatorSatuses[curID])
+
+		case <-time.After(500 * time.Millisecond):
+		}
+		newAssignedOrder := assignOrder(&allElevatorSatuses)
+	
+		if newAssignedOrder.Floor != -1 && allElevatorSatuses[curID].DoorOpen && !allElevatorSatuses[curID].IsObstructed && time.Since(orderTimeOut) > config.OrderTimeOut && allElevatorSatuses[curID].Pos != -1 {
+			assignedOrder = newAssignedOrder
+
+			if assignedOrder != executeOrder{
+				go sendingElevatorToFloor(chans.Go_to_floor, assignedOrder.Floor)
+				go sendOutStatus(chans.Send_status, allElevatorSatuses[curID])
+				// fmt.Println("-> Status sendt: Go to floor ", assignedOrder.Floor)
+				go checkIfEngineFails(assignedOrder.Floor, &allElevatorSatuses[curID], chans.Send_status)
+				executeOrder = assignedOrder
+			}
+			if assignedOrder.Floor == allElevatorSatuses[curID].Pos {
+				updateOrderListCompleted(&allElevatorSatuses, assignedOrder, &orderTimeOut)
+			}
+			//printElevatorStatus(allElevatorSatuses[curID])
+		}
+	}
+}
+
 // updates OrderList and CabOrders based on button presses
 func updateOrderListButton(btnEvent messages.ButtonEvent_message, thisElevator *ElevatorStatus) {
 
@@ -87,20 +172,27 @@ func updateOrderListOther(incomingStatus ElevatorStatus, list *[numElevators]Ele
 func updateOrderListCompleted(list *[numElevators]ElevatorStatus, assignedOrder ButtonEvent_message, orderTimeOut *time.Time) {
 	curFloor := list[curID].Pos
 
+	
+
+	//TODO CLEAN CODE ANNNND LOGIC
+
 	// checks if the elevator has a cab call for the current floor
-	if list[curID].CabOrders[curFloor] == true && list[curID].DoorOpen == true {
+	if list[curID].CabOrders[curFloor] == true && list[curID].DoorOpen == true && assignedOrder.Floor==curFloor {
 		list[curID].CabOrders[curFloor] = false
 		*orderTimeOut = time.Now()
 		return
 	}
 
 	orderIdx := floorToOrderListIdx(assignedOrder.Floor, assignedOrder.Button)
+	if orderIdx == -1{
+		return
+	}
 
 	if list[curID].OrderList[orderIdx].HasOrder && list[curID].OrderList[orderIdx].Floor == curFloor {
 		list[curID].OrderList[orderIdx].HasOrder = false
 		list[curID].OrderList[orderIdx].VersionNum += 1
 		*orderTimeOut = time.Now()
-		fmt.Println("Hall order compleete:", orderListIdxToFloor(orderIdx))
+		// fmt.Println("Hall order compleete:", orderListIdxToFloor(orderIdx))
 	}
 }
 
@@ -124,7 +216,7 @@ func sendOutLightsUpdate(sendLampUpdate chan<- messages.LampUpdate_message, stat
 			}
 			sendLampUpdate <- light //send light at channel
 		}
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * 100)    //TODO: make not magic
 	}
 }
 
@@ -157,7 +249,7 @@ func sendingElevatorToFloor(channel chan<- int, goToFloor int) {
 
 func contSend(channel chan<- ElevatorStatus, status *ElevatorStatus) {
 	for {
-		printElevatorStatus(*status)
+		// printElevatorStatus(*status)
 		go sendOutStatus(channel, *status)
 		time.Sleep(config.BcastIntervall)
 	}
@@ -168,7 +260,6 @@ func checkIfEngineFails(assignedFloor int, status *ElevatorStatus, send_status c
 	lastPos := -1
 	for assignedFloor != -1 {
 		curPos = status.Pos
-		fmt.Println(curPos)
 		if curPos == assignedFloor {
 			return
 		}
@@ -178,7 +269,7 @@ func checkIfEngineFails(assignedFloor int, status *ElevatorStatus, send_status c
 			faultCounter += 1
 			if faultCounter > 10 {
 				status.IsAvailable = false
-				printElevatorStatus(*status)
+				// printElevatorStatus(*status)
 				go sendOutStatus(send_status, *status)
 				err := errors.New("engine failure")
 				panic(err)
@@ -186,85 +277,6 @@ func checkIfEngineFails(assignedFloor int, status *ElevatorStatus, send_status c
 			}
 		}
 		time.Sleep(time.Second * 1)
-	}
-}
-
-func RunOrders(chans OrderChannels) {
-	fmt.Println("Order module initializing....")
-
-	allElevatorSatuses := initAllElevatorStatuses()
-	initThisElevatorStatus(&allElevatorSatuses, chans)
-
-	// Default assignedOrder and executeOrder
-	assignedOrder := ButtonEvent_message{-1, messages.UNDEFINED}
-	executeOrder := ButtonEvent_message{-1, messages.UNDEFINED}
-	// 
-	orderTimeOut := time.Now().Add(-time.Hour)
-
-	thisElevatorStatus := &allElevatorSatuses[curID]
-	//thread continuinling sending out this elevatorStatus to other elevators
-	go contSend(chans.Send_status, thisElevatorStatus)
-	//thread continuinling sending out this LampMessages to elevator module
-	go sendOutLightsUpdate(chans.UpdateLampMessage, thisElevatorStatus)
-	// Thread to check if elevators have gone offline or come back online
-	go checkIfElevatorOffline(&allElevatorSatuses)
-
-	for {
-		select {
-		case buttonEvent := <-chans.Button_press:
-			fmt.Println("--------Button pressed------")
-			updateOrderListButton(buttonEvent, &allElevatorSatuses[curID])
-			
-			fmt.Println("-> Status sendt: Buttonpress,", buttonEvent.Button)
-
-			go sendOutStatus(chans.Send_status, allElevatorSatuses[curID])
-
-		case elevatorStatus := <-chans.Received_elevator_update: // new update
-			// update own orderlist and otherElev with the incomming elevatorStatus     
-
-			if elevatorStatus.ID != curID {
-				updateOtherElev(elevatorStatus, &allElevatorSatuses)
-				updateOrderListOther(elevatorStatus, &allElevatorSatuses)
-				fmt.Println("<- Recived status")
-			}
-
-		case floor := <-chans.New_floor:
-			updateElevatorStatusFloor(floor, &allElevatorSatuses)
-			updateOrderListCompleted(&allElevatorSatuses, assignedOrder, &orderTimeOut)
-			go sendOutStatus(chans.Send_status, allElevatorSatuses[curID])
-			fmt.Println("-> Status sendt: New floor:", floor)
-
-		case isOpen := <-chans.Door_status:
-			updateElevatorStatusDoor(isOpen, &allElevatorSatuses)
-			if isOpen == true {
-				updateOrderListCompleted(&allElevatorSatuses, assignedOrder, &orderTimeOut)
-			}
-			go sendOutStatus(chans.Send_status, allElevatorSatuses[curID])
-			fmt.Println("-> Status sendt: Door: ", isOpen)
-
-		case IsObstructed := <-chans.DoorObstructed:
-			allElevatorSatuses[curID].IsObstructed = IsObstructed //TODO burde denne abstraheres ut i en egen funksjon
-			go sendOutStatus(chans.Send_status, allElevatorSatuses[curID])
-
-		case <-time.After(500 * time.Millisecond):
-		}
-		newAssignedOrder := assignOrder(&allElevatorSatuses)
-	
-		if newAssignedOrder.Floor != -1 && allElevatorSatuses[curID].DoorOpen && !allElevatorSatuses[curID].IsObstructed && time.Since(orderTimeOut) > config.OrderTimeOut {
-			assignedOrder = newAssignedOrder
-
-			if assignedOrder != executeOrder{
-				go sendingElevatorToFloor(chans.Go_to_floor, assignedOrder.Floor)
-				go sendOutStatus(chans.Send_status, allElevatorSatuses[curID])
-				fmt.Println("-> Status sendt: Go to floor ", assignedOrder.Floor)
-				go checkIfEngineFails(assignedOrder.Floor, &allElevatorSatuses[curID], chans.Send_status)
-				executeOrder = assignedOrder
-			}
-			if assignedOrder.Floor == allElevatorSatuses[curID].Pos {
-				updateOrderListCompleted(&allElevatorSatuses, assignedOrder, &orderTimeOut)
-			}
-			//printElevatorStatus(allElevatorSatuses[curID])
-		}
 	}
 }
 

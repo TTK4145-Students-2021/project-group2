@@ -23,6 +23,7 @@ import (
 
 const _floorPollRate = time.Millisecond * 20
 const _obstrPollRate = time.Millisecond * 20
+const _doorOpenSimulationTime = time.Millisecond * 500
 const NoFloor int = -1
 
 // StateType is an extensible state type in the elevator
@@ -308,11 +309,12 @@ func (a *MovingAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Eve
 
 // Execute when AtFloorDoorOpen state is set
 func (a *AtFloorOpenAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
-	elev.mutex.Lock()
-	defer elev.mutex.Unlock()
+	time.Sleep(_doorOpenSimulationTime) // Simulating the time it takes for the door to open
 	SetDoorOpenLamp(true)
 	fmt.Println("Elevator doors open")
+	elev.mutex.Lock()
 	elev.Available = true
+	elev.mutex.Unlock()
 	return NoOp
 }
 

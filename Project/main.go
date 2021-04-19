@@ -20,25 +20,22 @@ func main() {
 
 	// Setup all the channels we need
 	getElevatorUpdate := make(chan bool)
-	doorOpen := make(chan bool)
-	doorObstructed := make(chan bool)
-	currentFloor := make(chan int)                          //new  floor
-	buttonAction := make(chan messages.ButtonEvent_message) //pressed button
-	order := make(chan int)                                 // goTo floor
-	orderResponse := make(chan error)                       //TODO: Order response can be a const int instead
+	doorOpen := make(chan bool, 5)
+	doorObstructed := make(chan bool,5)
+	currentFloor := make(chan int, 10)                          //new  floor
+	buttonAction := make(chan messages.ButtonEvent_message, 10) //pressed button
+	order := make(chan int, 2)                                 // goTo floor
 	controllerReady := make(chan bool)                      // Check when controller is done
-	elevatorStatusTx := make(chan messages.ElevatorStatus)  // Change to orders.ElevatorStatus
-	elevatorStatusRx := make(chan messages.ElevatorStatus)  // Change to orders.ElevatorStatus
-	lampNotifications := make(chan messages.LampUpdate_message)
+	elevatorStatusTx := make(chan messages.ElevatorStatus)
+	elevatorStatusRx := make(chan messages.ElevatorStatus)
+	lampNotifications := make(chan messages.LampUpdate_message, 5)
 
-	//
 	// Bundle controller channels in a struct
 	ctrChans := elevator.ControllerChannels{
 		DoorOpen             : doorOpen,
 		CurrentFloor         : currentFloor,
 		RedirectButtonAction : buttonAction,
 		ReceiveOrder         : order,
-		RespondOrder         : orderResponse,
 		ElevatorUpdateRequest: getElevatorUpdate,
 		ControllerReady      : controllerReady,
 		DoorObstructed       : doorObstructed,
@@ -59,14 +56,10 @@ func main() {
 
 	controller := elevator.NewController(ctrChans)
 	go controller.Run()
-	<-controllerReady // Check when controller is ready
-
-	fmt.Println("Should start running orders")
+	<-controllerReady
 
 	go bcast.Transmitter(config.BcastPort, elevatorStatusTx)
 	go bcast.Receiver(config.BcastPort, elevatorStatusRx)
 
 	orders.RunOrders(orderChans)
-
-
 }

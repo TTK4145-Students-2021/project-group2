@@ -72,20 +72,19 @@ func assignCabOrder(cabOrders [numFloors]bool, curFloor int) ButtonEvent_message
 	//default pickedOrder
 	pickedOrder := ButtonEvent_message{-1, -1}
 
-	shortestCabDistance := numFloors + 1
-	for orderFloor,curOrder := range cabOrders{
-		if curOrder == true {
-			curCabDistance := distanceFromOrder(orderFloor, curFloor)
-			if curCabDistance < shortestCabDistance {
+	shortestDistance := numFloors + 1
+	for orderFloor, hasOrder := range cabOrders{
+		if hasOrder == true {
+			curDistance := distanceFromOrder(curFloor, orderFloor)
+			if curDistance < shortestDistance {
 				pickedOrder.Floor = orderFloor
 				pickedOrder.Button = messages.BT_Cab
+				shortestDistance = curDistance
 			}
 		}
 	}
 	return pickedOrder
 }
-
-
 
 func calculateAllCosts(allElevatorSatuses *[numElevators]ElevatorStatus)  {
 	orderList := &allElevatorSatuses[curID].OrderList
