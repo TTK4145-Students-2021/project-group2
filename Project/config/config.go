@@ -39,8 +39,9 @@ func InitConfig() {
 	if len(os.Args) < 2 {
 		SimPort = "15657"
 		ID = 0
+	} else {
+		SimPort = os.Args[1]
+		ID, _ = strconv.Atoi(os.Args[2])
 	}
-	SimPort = os.Args[1]
-	ID, _ = strconv.Atoi(os.Args[2])
 	fmt.Println("SimPort:", SimPort, "\tID: ", ID)
 }
