@@ -1,5 +1,7 @@
 package orderDistribution
 
+
+
 import(
 	"../messages"
 	"../config"
@@ -7,6 +9,16 @@ import(
 	"time"
 	"errors"
 )
+/*
+*=============================================================================
+ * @Description:
+ * Contains utility functions for use in the rest of the orderDistribution moudle
+ * Her under is also checks used in run_order
+ *
+ * 
+/*=============================================================================
+*/
+
 
 func orderListIdxToFloor(idx int) int {
 	if idx < _numFloors-1 {
@@ -98,7 +110,7 @@ func checkIfEngineFails(assignedFloor int, status *ElevatorStatus, send_status c
 	faultCounter := 0
 	curPos := -1
 	lastPos := -1
-	for assignedFloor != -1 {
+	for {
 		curPos = status.Pos
 		if curPos == assignedFloor {
 			return
@@ -108,15 +120,11 @@ func checkIfEngineFails(assignedFloor int, status *ElevatorStatus, send_status c
 		} else {
 			faultCounter += 1
 			if faultCounter > _engineFailureTimeOut {
-				status.IsAvailable = false
-				// printElevatorStatus(*status)
-				go sendOutStatus(send_status, *status)
 				err := errors.New("engine failure")
 				panic(err)
-				return
 			}
 		}
-		time.Sleep(time.Second * 1)
+		time.Sleep(time.Second)
 	}
 }
 

@@ -3,11 +3,19 @@ package orderDistribution
 import (
 	"time"
 )
+/*
+*=============================================================================
+ * @Description:
+ * Contains all functions used for initallizing the list of information stored
+ * in the runOrder() function
+ *
+ * 
+/*=============================================================================
+*/
 
 func initOrderList() [_orderListLength]HallOrder {
 	OrderList := [_orderListLength]HallOrder{}
 
-	// initalizing HallUp Orders
 	initialCosts := [_numElevators]int{10000}
 
 	for idx := 0; idx < _orderListLength; idx ++{

@@ -4,6 +4,15 @@ import (
 	"../messages"
 	"time"
 )
+/*
+*=============================================================================
+ * @Description:
+ * Contains all functions used for sneding information from the orderDsitribution module
+ * to the elevtorController and to the rest of the network
+ *
+ * 
+/*=============================================================================
+*/
 
 const _lampPollRate = 20 * time.Millisecond
 

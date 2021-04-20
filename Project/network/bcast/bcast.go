@@ -9,6 +9,15 @@ import (
 	"../conn"
 )
 
+/*=============================================================================
+ * @Description:
+ * Code retrived from the staff at TTK4145. Github link here
+ * https://github.com/TTK4145/Network-go
+ *
+ * 
+/*=============================================================================
+*/
+
 // Encodes received values from `chans` into type-tagged JSON, then broadcasts
 // it on `port`
 func Transmitter(port int, chans ...interface{}) {

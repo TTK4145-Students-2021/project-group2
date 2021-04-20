@@ -3,7 +3,18 @@ package orderDistribution
 import(
 	"../messages"
 	"time"
+	"fmt"
 )
+
+/*
+*=============================================================================
+ * @Description:
+ * Contains functions used for updating the information stored and used in runOrders()
+ * 
+ *
+ * 
+/*=============================================================================
+*/
 
 
 func updateOrders(btnEvent messages.ButtonEvent, thisElevator *ElevatorStatus) {
@@ -11,7 +22,7 @@ func updateOrders(btnEvent messages.ButtonEvent, thisElevator *ElevatorStatus) {
 	if btnEvent.Button == messages.BT_Cab {
 		thisElevator.CabOrders[btnEvent.Floor] = true
 
-	} else { //TODO remove placeInList or look at OrderList's structure
+	} else {
 		idx := floorToOrderListIdx(btnEvent.Floor, btnEvent.Button)
 		if thisElevator.OrderList[idx].HasOrder == false {
 			thisElevator.OrderList[idx].HasOrder = true
@@ -22,7 +33,7 @@ func updateOrders(btnEvent messages.ButtonEvent, thisElevator *ElevatorStatus) {
 
 //Updates the information list with the incoming update
 func updateElevatorStatuses(incomingStatus ElevatorStatus, list *[_numElevators]ElevatorStatus) {
-	list[incomingStatus.ID] = incomingStatus //accountign for zero indexing
+	list[incomingStatus.ID] = incomingStatus
 }
 func updateElevatorStatusDoor(value bool, list *[_numElevators]ElevatorStatus) {
 	list[_thisID].DoorOpen = value
@@ -32,31 +43,11 @@ func updateElevatorStatusFloor(pos int, list *[_numElevators]ElevatorStatus) {
 }
 
 func updateOrderList(incomingStatus ElevatorStatus, allElevatorSatuses *[_numElevators]ElevatorStatus) {
-	/*
-	for i,curOrder := range thisOrderList {
-		incomingOrder := incomingStatus.OrderList[i]
-		// this if statement checks if the order should be updated and updates it
-		if incomingOrder.VersionNum > curOrder.VersionNum {
-			curOrder.HasOrder = incomingOrder.HasOrder
-			curOrder.VersionNum = incomingOrder.VersionNum
-		}
-	}
-	*/
-	// orderList := &allElevatorSatuses[_thisID].OrderList
-	// for i, curOrder := range orderList {
-	// 	incomingOrder := incomingStatus.OrderList[i]
-	// 	// this if statement checks if the order should be updated and updates it
-	// 	if incomingOrder.VersionNum > curOrder.VersionNum {
-	// 		curOrder.HasOrder = incomingOrder.HasOrder
-	// 		curOrder.VersionNum = incomingOrder.VersionNum
-	// 	}
-	// }
-
 	for i := 0; i < len(allElevatorSatuses[_thisID].OrderList); i++ {
 
 		// the first if sentences checks for faiure is the version controll
 		if incomingStatus.OrderList[i].VersionNum == allElevatorSatuses[_thisID].OrderList[i].VersionNum && incomingStatus.OrderList[i].HasOrder != allElevatorSatuses[_thisID].OrderList[i].HasOrder {
-			// fmt.Println("There is smoething worng with the version controll of the order system")
+			fmt.Println("There is smoething worng with the version controll of the order system")
 			allElevatorSatuses[_thisID].OrderList[i].HasOrder = true
 			allElevatorSatuses[_thisID].OrderList[i].VersionNum += 1
 		}
@@ -79,7 +70,7 @@ func updateOrderListCompleted(list *[_numElevators]ElevatorStatus, assignedOrder
 	}
 
 	orderIdx := floorToOrderListIdx(assignedOrder.Floor, assignedOrder.Button)
-	if orderIdx == -1{
+	if assignedOrder.Button == -1{
 		return
 	}
 
@@ -87,6 +78,5 @@ func updateOrderListCompleted(list *[_numElevators]ElevatorStatus, assignedOrder
 		list[_thisID].OrderList[orderIdx].HasOrder = false
 		list[_thisID].OrderList[orderIdx].VersionNum += 1
 		*TimeOfLastCompletion = time.Now()
-		// fmt.Println("Hall order complete:", orderListIdxToFloor(orderIdx))
 	}
 }

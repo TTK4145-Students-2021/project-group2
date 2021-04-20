@@ -16,7 +16,6 @@ import (
  * is needed for the modules to work together, redirecting inputs and outputs to their
  * intended destinations.
  *
- * @Author: Eldar Sandanger
 /*=============================================================================
 */
 

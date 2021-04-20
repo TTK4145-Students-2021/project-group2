@@ -9,10 +9,10 @@ import (
 
 /*=============================================================================
  * @Description:
- * 
- *
- *
- * @Author: 
+ * This module contains the function, assignOrder, and its subfunctions. AssignOrder()
+ * assigns a order to the elevator by first calculating the costs for all orders and returning
+ * the order with the lowest cost for this elevator, if any. If the elevator has a cab order, 
+ * it will assign the closest cab order and no hall order. 
 /*=============================================================================
 */
 
@@ -22,8 +22,8 @@ const ObstructedCost = 100
 const oneFloorAwayCost = 10
 const unAvailableCost = 4000
 const timePenaltyCost = -15
+var lowestAcceptableCost = 500
 
-// runs through the costFunction for all true orders
 func assignOrder(allElevatorStatuses *[_numElevators]ElevatorStatus) ButtonEvent {
 	
 	calculateAllCosts(allElevatorStatuses)
@@ -52,7 +52,7 @@ func assignHallOrder(allElevatorStatuses *[_numElevators]ElevatorStatus) ButtonE
 	for i := range costMatrix {
 		costMatrix[i] = orderList[i].Costs
 	}
-	lowestCost := 500
+	lowestCost := lowestAcceptableCost
 
 	/*Findes the lowet cost, if this cost is yours then retrun that order, if not, make that order and the costs for the assigned elevator equal to maxCost,
 	 and repeat for _numElevators */

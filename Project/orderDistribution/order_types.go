@@ -5,6 +5,15 @@ import(
 	"../config"
 	"../messages"
 )
+/*
+*=============================================================================
+ * @Description:
+ * Contains the decleratation for all types used in the orderDistribution module
+ * 
+ *
+ * 
+/*=============================================================================
+*/
 
 type ButtonEvent = messages.ButtonEvent
 type ButtonType = messages.ButtonType

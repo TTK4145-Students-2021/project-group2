@@ -8,10 +8,10 @@ import (
 )
 
 /*=============================================================================
- * @Description: Driver functions needed to communicate with an elevator.
+ * @Description:
+ * Driver functions needed to communicate with an elevator.
  * Code pre-distributed from subject coordinators.
  *
- * @Author: Unknown
 /*=============================================================================
 */
 

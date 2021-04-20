@@ -17,7 +17,6 @@ import (
  * For more information and a detailed explanation on the state machine framework
  * used in this code, see the package Readme.md
  *
- * @Author: Eldar Sandanger
 /*=============================================================================
 */
 
