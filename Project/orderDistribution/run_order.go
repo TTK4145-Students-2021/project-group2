@@ -1,10 +1,6 @@
 package orderDistribution
 
-/*The order module has a main function called runOrders() which handels alle the inputs and ouputs from the module*/
-
 import (
-	//"os"
-	// "errors"
 	"fmt"
 	"time"
 	"../config"

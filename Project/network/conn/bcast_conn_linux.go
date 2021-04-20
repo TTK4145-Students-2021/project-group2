@@ -2,7 +2,7 @@
 
 package conn
 
-/*
+
 func DialBroadcastUDP(port int) net.PacketConn {
 	s, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, syscall.IPPROTO_UDP)
 	if err != nil { fmt.Printf("Error: Socket: %#+v\n") }
@@ -20,4 +20,4 @@ func DialBroadcastUDP(port int) net.PacketConn {
 
 	return conn
 }
-*/
+

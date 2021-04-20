@@ -14,7 +14,6 @@ import (
  * Code retrived from the staff at TTK4145. Github link here
  * https://github.com/TTK4145/Network-go
  *
- * 
 /*=============================================================================
 */
 

@@ -1,6 +1,3 @@
-// run main with as follows:
-// go run main.go [SimPort] [elevatorID]
-
 package main
 
 import (
@@ -29,19 +26,6 @@ func main() {
 	elevatorStatusTx := make(chan orderDistribution.ElevatorStatus)
 	elevatorStatusRx := make(chan orderDistribution.ElevatorStatus)
 	lampNotifications := make(chan messages.LampUpdate, 1)
-
-	/*
-		ElevatorUpdateRequest := make(chan bool)
-		DoorOpen := make(chan bool, 1)
-		DoorObstructed := make(chan bool,1)
-		CurrentFloor := make(chan int, 1)
-		ButtonAction := make(chan messages.ButtonEvent, 1)
-		ExecutionOrder := make(chan int, 1)
-		ControllerReady := make(chan bool)
-		ElevatorStatusTx := make(chan orderDistribution.ElevatorStatus)
-		ElevatorStatusRx := make(chan orderDistribution.ElevatorStatus)
-		LampUpdates := make(chan messages.LampUpdate, 1)
-	*/
 
 	// Bundle controller channels in a struct
 	ctrChans := elevController.ControllerChannels{

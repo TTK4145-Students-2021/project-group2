@@ -18,7 +18,7 @@ import (
 
 var Port string
 
-const ID int = 0 // Elevator ID is zero-indexed
+const ID int = 1 // Elevator ID is zero-indexed
 const NumFloors int = 4
 const BottomFloor int = 0
 
