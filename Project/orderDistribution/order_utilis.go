@@ -1,7 +1,5 @@
 package orderDistribution
 
-
-
 import(
 	"../messages"
 	"../config"

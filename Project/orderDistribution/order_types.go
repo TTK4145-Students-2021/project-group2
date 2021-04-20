@@ -16,7 +16,6 @@ import(
 type ButtonEvent = messages.ButtonEvent
 type ButtonType = messages.ButtonType
 type LampUpdate = messages.LampUpdate
-// type OrderList = messages.OrderList
 
 const _orderListLength = config.NumFloors*2 - 2
 const _numElevators = config.NumElevators
@@ -52,7 +51,7 @@ type ElevatorStatus struct {
 type HallOrder struct {
 	HasOrder   bool
 	Floor      int
-	Direction  ButtonType //up = 0, down = 1
+	Direction  ButtonType
 	VersionNum int
 	Costs      [_numElevators]int
 	TimeStamp  time.Time

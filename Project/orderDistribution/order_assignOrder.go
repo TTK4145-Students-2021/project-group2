@@ -1,6 +1,5 @@
 package orderDistribution
 
-// this module chooses wich order the elevator should execute
 import (
 	"time"
 	"../messages"

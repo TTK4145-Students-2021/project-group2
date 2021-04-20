@@ -37,7 +37,7 @@ The premises for the order module are:
 - The order module knows "everything" it needs to know about its own elevator, but also about every other elevator, in order to continuously calculate which orders it is best suited to take relative to all other elevators. It will then decide which order to execute on the basis that it 'knows' that it is in the best suited position to do so.  
 
 ## Network
-The network module is responsible for the communication between the elevators. The communication is done using broadcasting and all elevators listening to the same port on the network. It only consists of the code handed out by the staff and is relatively small. Two channels are created when initializing the program and these are passed to the broadcast and receiver functions respectively. These two channels are allso passed to the orderDistibution module and the module uses these channels to communicate out its own status and receive other elevator's statuses.
+The network module is responsible for the communication between the elevators. The communication is done using broadcasting and all elevators listening to the same port on the network. It only consists of the [code handed out by the staff](https://github.com/TTK4145/Network-go) and is relatively small. Two channels are created when initializing the program and these are passed to the broadcast and receiver functions respectively. These two channels are allso passed to the orderDistibution module and the module uses these channels to communicate out its own status and receive other elevator's statuses.
 
 
 ## Messages
