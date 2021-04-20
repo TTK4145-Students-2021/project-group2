@@ -18,7 +18,9 @@ This module consists of an abstract elevator state machine, an elevator controll
 
 The state machine can be thought of as an abstraction of the 'physical' elevator while the controller is used to perform operations on it. More generally, the controller acts like a broker between the 'button-panel'-interface, the state machine and the order module. It redirects button actions to the order system, and the order system sorts out which commands should be performed first. It then finally tells the controller to execute an order.
 
-The controller also provides channels that continuously sends updates on the elevator status (door status, current floor etc.) to external listeners - in this case the order module. The order module then has the option of using this information to predict what actions will be allowed to perform and decide when to perform them. 
+The controller also provides channels that continuously sends updates on the elevator status (door status, current floor etc.) to external listeners - in this case the order module. The order module then has the option of using this information to predict what actions will be allowed to perform and decide when to perform them.
+
+The framwork applied on the elevator_state_machine code may seem unfamiliar to many, as it is to the most common approach. Therefore, a Readme with more extensive explanations on how it works, code explanations and where it's fetched from is included in the elevController package [here](./Project/elevController/Readme.md).
 
 ## OrderDistribution
 
