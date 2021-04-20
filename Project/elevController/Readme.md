@@ -7,7 +7,7 @@ This Readme is included in order to clarify any additional information regarding
 
 The ElevatorController works like a broker between the button-panel interface, the order-sorting system and the actions performed on the elevator. Any button-event is redirected to whatever listener that needs this information, and any request to perform an operation on the elevator is performed by the controller (and fails if it is not possible to perform). 
 
-## Elevator_fsm
+## Elevator_state_machine
 
 If we concider the physical elevator as a state machine, this submodule is an abstract implementation of its states, logic and possible actions. To implement the state pattern, a perticular pattern framework has been used (see: https://venilnoronha.io/a-simple-state-machine-framework-in-go). This framework might seem unfamiliar to some programmers as it is not the most 'common approach'. Therefore, we will put some effort in this section to clarify how it works. 
 

@@ -1,11 +1,5 @@
 package messages
 
-import (
-	// "time"
-
-	// "../config"
-)
-
 type ButtonType int
 
 const (
@@ -25,24 +19,3 @@ type LampUpdate struct {
 	Button ButtonType
 	Turn   bool
 }
-
-// type HallOrder struct {
-// 	HasOrder   bool
-// 	Floor      int
-// 	Direction  ButtonType //up = 0, down = 1
-// 	VersionNum int
-// 	Costs      [config.NumElevators]int
-// 	TimeStamp  time.Time
-// }
-
-// type ElevatorStatus struct {
-// 	ID           int
-// 	Pos          int
-// 	OrderList    [config.NumFloors*2 - 2]HallOrder
-// 	IsOnline     bool
-// 	DoorOpen     bool
-// 	CabOrders    [config.NumFloors]bool
-// 	IsAvailable  bool
-// 	IsObstructed bool
-// 	Timestamp    time.Time
-// }

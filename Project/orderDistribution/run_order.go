@@ -14,9 +14,9 @@ import (
 
 /*=============================================================================
  * @Description:
- * Contains the toplevel run function for the order module
- * 
- *
+ * Contains the toplevel run function for the order module. It mediates the flow
+ * of information between modules and connects it with the general decision-making
+ * logic (cost funcition, order assignment etc..). 
  * 
 /*=============================================================================
 */
@@ -45,7 +45,6 @@ func RunOrders(chans OrderChannels) {
 	for {
 		select {
 		case buttonEvent := <-chans.ButtonPress:
-			fmt.Println("--------Button pressed------")
 			updateOrders(buttonEvent, thisElevatorStatus)   
 			go backup.SaveCabOrders(thisElevatorStatus.CabOrders)
 			 
@@ -58,8 +57,6 @@ func RunOrders(chans OrderChannels) {
 		case floor := <-chans.NewFloor:
 			updateElevatorStatusFloor(floor, &allElevatorStatuses)
 			go backup.SaveCabOrders(thisElevatorStatus.CabOrders)
-			fmt.Println("-> Status sendt: New floor:", floor)
-			printElevatorStatus(allElevatorStatuses[_thisID])
 
 		case isOpen := <-chans.DoorOpen:
 			updateElevatorStatusDoor(isOpen, &allElevatorStatuses)
@@ -67,8 +64,6 @@ func RunOrders(chans OrderChannels) {
 				updateOrderListCompleted(&allElevatorStatuses, assignedOrder, &TimeOfLastCompletion)
 			}
 			go backup.SaveCabOrders(thisElevatorStatus.CabOrders)
-			fmt.Println("-> Status sendt: Door: ", isOpen)
-			printElevatorStatus(allElevatorStatuses[_thisID])
 
 		case IsObstructed := <-chans.DoorObstructed:
 			allElevatorStatuses[_thisID].IsObstructed = IsObstructed 
@@ -82,7 +77,6 @@ func RunOrders(chans OrderChannels) {
 			assignedOrder = newAssignedOrder
 			if assignedOrder != executeOrder{
 				go sendingElevatorToFloor(chans.GotoFloor, assignedOrder.Floor)
-				fmt.Println("Sending elev to floor", assignedOrder.Floor)
 				go checkIfEngineFails(assignedOrder.Floor, &allElevatorStatuses[_thisID], chans.SendStatus)
 				executeOrder = assignedOrder
 			}

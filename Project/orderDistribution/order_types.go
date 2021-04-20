@@ -10,8 +10,6 @@ import(
  * @Description:
  * Contains the decleratation for all types used in the orderDistribution module
  * 
- *
- * 
 /*=============================================================================
 */
 
@@ -47,7 +45,6 @@ type ElevatorStatus struct {
 	IsOnline     		 bool
 	DoorOpen       		 bool
 	CabOrders    		 [_numFloors]bool
-	IsAvailable  		 bool
 	IsObstructed 		 bool
 	LastAlive    		 time.Time
 }

@@ -6,10 +6,9 @@ import (
 /*
 *=============================================================================
  * @Description:
- * Contains all functions used for initallizing the list of information stored
+ * Contains all functions used for initializing the list of information stored
  * in the runOrder() function
  *
- * 
 /*=============================================================================
 */
 
@@ -46,7 +45,6 @@ func initAllElevatorStatuses() [_numElevators]ElevatorStatus {
 			IsOnline:     false, 
 			DoorOpen:     false,
 			CabOrders:    CabOrders,
-			IsAvailable:  false, 
 			IsObstructed: false,
 		}
 		listOfElevators[i] = Status
@@ -58,7 +56,6 @@ func initAllElevatorStatuses() [_numElevators]ElevatorStatus {
 func initThisElevatorStatus(allElevatorSatuses *[_numElevators]ElevatorStatus, chans OrderChannels){
 	 
 	allElevatorSatuses[_thisID].IsOnline = true
-	allElevatorSatuses[_thisID].IsAvailable = true
 
 	chans.GetInitPosition <- true
 	initFloor := <-chans.NewFloor

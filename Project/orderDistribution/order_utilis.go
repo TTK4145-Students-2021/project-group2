@@ -9,13 +9,12 @@ import(
 	"time"
 	"errors"
 )
+
 /*
 *=============================================================================
  * @Description:
- * Contains utility functions for use in the rest of the orderDistribution moudle
- * Her under is also checks used in run_order
+ * Contains utility functions for use in the rest of the orderDistribution module
  *
- * 
 /*=============================================================================
 */
 
@@ -72,20 +71,6 @@ func ifXinSliceInt(x int, slice []int) bool {
 	return false
 }
 
-// Functions for printing out the Elevator staus and OrderList
-func printOrderList(list [_orderListLength]HallOrder) {
-	for i := 0; i < len(list); i++ {
-		fmt.Println("Floor: ", list[i].Floor, " |direction: ", list[i].Direction, " |Order: ", list[i].HasOrder, " |Version", list[i].VersionNum, "Costs", list[i].Costs)
-	}
-}
-
-func printElevatorStatus(status ElevatorStatus) {
-	fmt.Println("ID:", status.ID, " |Currentfloor:", status.Pos, "| Door open:", status.DoorOpen, "|avaliable:", status.IsAvailable, "|isOnline:", status.IsOnline, "|isObstructed:", status.IsObstructed, "\nCabOrders:", status.CabOrders)
-
-	printOrderList(status.OrderList)
-	fmt.Println("-----------------------------------------------")
-}
-
 func checkIfElevatorOffline(allElevatorStatuses *[_numElevators]ElevatorStatus) {
 	for{
 		for elevID := range allElevatorStatuses {
@@ -134,4 +119,18 @@ func canAcceptOrder(newAssignedOrder ButtonEvent, elevatorStatus ElevatorStatus,
 		elevatorStatus.DoorOpen && !elevatorStatus.IsObstructed && 
 		time.Since(TimeOfLastCompletion) > _orderTimeOut && 
 		elevatorStatus.Pos != -1)
+}
+
+// Functions for printing out the Elevator staus and OrderList
+func printOrderList(list [_orderListLength]HallOrder) {
+	for i := 0; i < len(list); i++ {
+		fmt.Println("Floor: ", list[i].Floor, " |direction: ", list[i].Direction, " |Order: ", list[i].HasOrder, " |Version", list[i].VersionNum, "Costs", list[i].Costs)
+	}
+}
+
+func printElevatorStatus(status ElevatorStatus) {
+	fmt.Println("ID:", status.ID, " |Currentfloor:", status.Pos, "| Door open:", status.DoorOpen, "|isOnline:", status.IsOnline, "|isObstructed:", status.IsObstructed, "\nCabOrders:", status.CabOrders)
+
+	printOrderList(status.OrderList)
+	fmt.Println("-----------------------------------------------")
 }

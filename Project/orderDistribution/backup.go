@@ -11,6 +11,13 @@ import (
 
 	"../config"
 )
+/*=============================================================================
+ * @Description:
+ * This module contains functionality for saving cab-orders for the ordersystem.
+ * These can then be read upon initialization.
+ *
+/*=============================================================================
+*/
 
 type BackupFile struct {
 	ID    int

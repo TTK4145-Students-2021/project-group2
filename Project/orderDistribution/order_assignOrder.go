@@ -9,19 +9,21 @@ import (
 
 /*=============================================================================
  * @Description:
- * This module contains the function, assignOrder, and its subfunctions. AssignOrder()
- * assigns a order to the elevator by first calculating the costs for all orders and returning
- * the order with the lowest cost for this elevator, if any. If the elevator has a cab order, 
+ * This module contains the functionality for assigning orders. 
+ * AssignOrder() calculates the costs for all orders and returns the order 
+ * with the lowest cost for this elevator, if any. If the elevator has a cab order, 
  * it will assign the closest cab order and no hall order. 
-/*=============================================================================
+ *
+ *=============================================================================
 */
 
 // this is an overview of the different costs utilized by the cost function
 const maxCost = 1000000
 const ObstructedCost = 100
 const oneFloorAwayCost = 10
-const unAvailableCost = 4000
+const offlineCost = 4000
 const timePenaltyCost = -15
+const unAvailableCost = 4000
 var lowestAcceptableCost = 500
 
 func assignOrder(allElevatorStatuses *[_numElevators]ElevatorStatus) ButtonEvent {
@@ -117,8 +119,8 @@ func calculateAllCosts(allElevatorStatuses *[_numElevators]ElevatorStatus)  {
 func costFunction(curElevator ElevatorStatus, orderFloor int, orderTimeStamp time.Time) int {
 	cost := 0
 	cost += curElevator.ID
-	if !curElevator.IsAvailable || !curElevator.IsOnline {
-		cost += unAvailableCost
+	if !curElevator.IsOnline {
+		cost += offlineCost
 	}
 	if curElevator.IsObstructed {
 		cost += ObstructedCost

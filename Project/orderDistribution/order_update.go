@@ -9,9 +9,8 @@ import(
 /*
 *=============================================================================
  * @Description:
- * Contains functions used for updating the information stored and used in runOrders()
- * 
- *
+ * Contains functions used for updating information regarding elevator statuses,
+ * order statuses and general information stored and used in runOrders()
  * 
 /*=============================================================================
 */

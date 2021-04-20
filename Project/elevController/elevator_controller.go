@@ -96,7 +96,10 @@ func (ctr *Controller) Run() error {
 			go elev.GotoFloor(a)
 
 		case a := <-channels.ReceiveLampUpdate:
-			go handleLampUpdate(a)
+			//go handleLampUpdate(a)
+			go func(m messages.LampUpdate){
+				SetButtonLamp(ButtonType(m.Button), m.Floor, m.Turn)
+			}(a)
 
 		case <-channels.ElevatorUpdateRequest:
 			channels.CurrentFloor <- elev.CurrentFloor
@@ -104,10 +107,6 @@ func (ctr *Controller) Run() error {
 			channels.DoorObstructed <- GetObstruction()
 		}
 	}
-}
-
-func handleLampUpdate(message messages.LampUpdate) {
-	SetButtonLamp(ButtonType(message.Button), message.Floor, message.Turn)
 }
 
 // SendElevatorStatus is used to send a full status report to channel recipients if requested
