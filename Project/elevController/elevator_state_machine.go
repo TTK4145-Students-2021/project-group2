@@ -1,4 +1,4 @@
-package elevator
+package elevController
 
 import (
 	"fmt"
@@ -21,15 +21,11 @@ import (
 /*=============================================================================
 */
 
-const _floorPollRate = time.Millisecond * 20
-const _obstrPollRate = time.Millisecond * 20
 const _doorOpenSimulationTime = time.Millisecond * 500
 const NoFloor int = -1
 
-// StateType is an extensible state type in the elevator
+// Types for defining possible States and Events
 type StateType string
-
-// EventType is an extensible event type in the elevator
 type EventType string
 
 const (
@@ -37,7 +33,6 @@ const (
 	Uninitialized      StateType = "Uninitialized"
 	Initializing       StateType = "Initializing"
 	Moving             StateType = "Moving"
-	AtFloorDoorsClosed StateType = "AtFloorDoorsClosed"
 	AtFloorDoorsOpen   StateType = "AtFloorDoorsOpen"
 
 	// Events that can be processed
@@ -59,13 +54,13 @@ type State struct {
 	Events Events
 }
 
-// Events represents the mapping of events that can be performed in given states
+// Represents the mapping of events that can be performed in given states
 type Events map[EventType]StateType
 
-// States represents a mapping of states and their implementations
+// Represents a mapping of states and their implementations
 type States map[StateType]State
 
-// ElevChannels contain all the channels needed for the elevator to work
+// Channels needed for the elevator to work
 type ElevChannels struct {
 	drv_floors <-chan int
 	drv_obstr  <-chan bool
@@ -73,34 +68,18 @@ type ElevChannels struct {
 
 // ElevatorMachine contains all information meeded to represent the physical state
 type ElevatorMachine struct {
-
-	// Track if elevator available
-	Available bool
-
-	// Previous state
-	Previous StateType
-
-	// Current state
-	Current StateType
-
-	// Holds the configuration of states and events handled by the state machine
-	States States
-
-	// Contains all channels the elevator needs
-	Channels ElevChannels
-
-	// Track current floor
-	CurrentFloor int
-
-	// Other relevant floor data
-	TopFloor    int
-	BottomFloor int
-
-	// Ensures exclusive access to the data contained within the struct
-	mutex sync.Mutex
+	Available 		bool
+	Previous 		StateType
+	Current 		StateType
+	States 			States
+	Channels 		ElevChannels
+	CurrentFloor 	int
+	TopFloor    	int
+	BottomFloor 	int
+	mutex 			sync.Mutex
 }
 
-// NewElevatorMachine initializes and returns a new elevator object
+// Initializes and returns a new elevator object
 func NewElevatorMachine() *ElevatorMachine {
 	return &ElevatorMachine{
 
@@ -163,9 +142,6 @@ func (elev *ElevatorMachine) SendEvent(event EventType, eventCtx EventContext) e
 		state, ok := elev.States[nextState]
 		if !ok || state.Action == nil {
 			// Configuration error
-			// If state.Action == nil, this implies there are no actions in the next state
-			// ... this means you have to make one!
-			// If not 'ok', this implies the action returned is not a legal action in the next state
 		}
 
 		// Transition to the next state
@@ -196,23 +172,21 @@ func (elev *ElevatorMachine) getNextState(event EventType) (StateType, error) {
 	return elev.Current, ErrEventRejected
 }
 
-// EventContext represents the context to be passed to the action implementation
+// Context types used to package information sent together with an event command
+
 type EventContext interface{}
 
-// InitContext contains information that needs to passed when initializing elevator
 type InitContext struct {
-	// What do we need for initializing the elevator??
 	Channels ElevChannels
 	err      error
 }
 
-// MoveContext contains information that needs to passed when moving up or down
 type MoveContext struct {
 	TargetFloor int
 	err         error
 }
 
-// Execute the initializing action for the elevator
+// Execute initAction for an eleavator instance
 func (a *InitAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
 	elev.mutex.Lock()
 	defer elev.mutex.Unlock()
@@ -221,7 +195,6 @@ func (a *InitAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Event
 	SetMotorDirection(MD_Stop)
 	SetDoorOpenLamp(false)
 
-	// Give the elevator all the necessary channels
 	elev.Channels = eventCtx.(*InitContext).Channels
 
 	// If not initially at floor -> move down to closest floor
@@ -236,7 +209,7 @@ func (a *InitAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Event
 	return SetInitialized
 }
 
-// Execute a move order received by the elevator machine
+// Execute a move order 
 func (a *MovingAction) Execute(elev *ElevatorMachine, eventCtx EventContext) EventType {
 	fmt.Println("Elevator executing order.")
 	elev.mutex.Lock()
@@ -263,7 +236,7 @@ func (a *MovingAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Eve
 	}
 	SetMotorDirection(dir)
 
-	// Wait to close door if obstructed
+	// Wait if obstructed
 	for GetObstruction() {
 		fmt.Println("Elevator obstructed! Waiting...")
 		time.Sleep(_obstrPollRate)
@@ -272,9 +245,7 @@ func (a *MovingAction) Execute(elev *ElevatorMachine, eventCtx EventContext) Eve
 
 	for {
 		select {
-		// If new floor detected
 		case newFloor := <-elev.Channels.drv_floors:
-
 			SetFloorIndicator(newFloor)
 
 			if newFloor == elev.CurrentFloor {
@@ -320,23 +291,13 @@ func (a *AtFloorOpenAction) Execute(elev *ElevatorMachine, eventCtx EventContext
 
 /*COMMENT ON ACTION STRUCTS:
 These action structs are pretty much only used to differentiate between different
-execution-functions.
-
-All of these might not be necessary. It's possible we don't actually have to perform
-an action when in certain states. However it is likely the action will only be to
-continuously monitor the elevators physical state and act upon changes to it.*/
+execution-functions.*/
 
 // InitAction should be used when initializing the elevator
 type InitAction struct{}
 
-// OnObstrAction should wait for the elevator to not be obstructed anymore
-type OnObstrAction struct{}
-
 // MovingAction represents the action executed when entering the Moving state
 type MovingAction struct{}
-
-// AtFloorClosedAction represents the action executed when in this state
-type AtFloorClosedAction struct{}
 
 // AtFloorOpenAction represents the action executed when in this state
 type AtFloorOpenAction struct{}

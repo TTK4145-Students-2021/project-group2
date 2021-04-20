@@ -1,4 +1,4 @@
-package elevator
+package elevController
 
 import (
 	"fmt"
@@ -20,29 +20,27 @@ import (
 /*=============================================================================
 */
 
-const _ctrPollRate = 20 * time.Millisecond
+const _doorPollRate  = 20 * time.Millisecond
+const _floorPollRate = 20 * time.Millisecond
+const _obstrPollRate = 20 * time.Millisecond
 
 type ControllerChannels struct {
 	DoorOpen              chan<- bool
 	CurrentFloor          chan<- int
-	RedirectButtonAction  chan<- messages.ButtonEvent_message
+	RedirectButtonAction  chan<- messages.ButtonEvent
 	ReceiveOrder          <-chan int
 	RespondOrder          chan<- error
 	ElevatorUpdateRequest <-chan bool
 	ControllerReady       chan<- bool
 	DoorObstructed        chan<- bool
-	ReceiveLampUpdate     <-chan messages.LampUpdate_message
+	ReceiveLampUpdate     <-chan messages.LampUpdate
 }
 
 type Controller struct {
-	// All the channels the controller needs for communication
 	Channels ControllerChannels
-
-	// Has to contain an elevator machine to control
 	Elev *ElevatorMachine
 }
 
-// NewController returns a controller containing an initialized ElevatorMachine
 func NewController(ctrChans ControllerChannels) *Controller {
 	InitElevatorDriver("localhost:"+config.SimPort, config.NumFloors)
 	elev := NewElevatorMachine()
@@ -52,19 +50,18 @@ func NewController(ctrChans ControllerChannels) *Controller {
 	}
 }
 
-// Run is used to 'turn on' and run a controller
 func (ctr *Controller) Run() error {
 	fmt.Println("Controller running")
 	channels := ctr.Channels
 	elev := ctr.Elev
 
-	drv_buttons := make(chan ButtonEvent)
-	drv_floors := make(chan int)
-	drv_obstr := make(chan bool)
+	drvButtons := make(chan ButtonEvent)
+	drvFloors := make(chan int)
+	drvObstr := make(chan bool)
 
 	elevChans := ElevChannels{
-		drv_floors: drv_floors,
-		drv_obstr:  drv_obstr,
+		drv_floors: drvFloors,
+		drv_obstr:  drvObstr,
 	}
 	err := elev.Initialize(elevChans)
 	if err != nil {
@@ -74,31 +71,29 @@ func (ctr *Controller) Run() error {
 	SetFloorIndicator(elev.CurrentFloor)
 
 	// Start elevator driver routines
-	go PollButtons(drv_buttons)
-	go PollFloorSensor(drv_floors)
+	go PollButtons(drvButtons)
+	go PollFloorSensor(drvFloors)
+
 	// Start routines for communication with external modules
 	go ctr.pollDoorOpen(elev)
 	go ctr.pollElevFloor(elev)
 	go ctr.pollDoorObstructed(elev)
-	//go ctr.ReceiveLampUpdates()
 
 	ctr.Channels.ControllerReady <- true
 
 	fmt.Println("Controller waiting for action...")
 	for {
 		select {
-		case a := <-drv_buttons:
-			fmt.Println("Button press registered")
-			fmt.Printf("%+v\n", a)
-			message := messages.ButtonEvent_message{
+		case a := <-drvButtons:
+
+			// Redirect message to order module
+			message := messages.ButtonEvent{
 				Floor:  a.Floor,
-				Button: messages.ButtonType_msg(a.Button),
+				Button: messages.ButtonType(a.Button),
 			}
 			channels.RedirectButtonAction <- message
 
 		case a := <-channels.ReceiveOrder:
-			fmt.Printf("New order received\n")
-			fmt.Printf("Target floor: %v\n", a)
 			go elev.GotoFloor(a)
 
 		case a := <-channels.ReceiveLampUpdate:
@@ -112,7 +107,7 @@ func (ctr *Controller) Run() error {
 	}
 }
 
-func handleLampUpdate(message messages.LampUpdate_message) {
+func handleLampUpdate(message messages.LampUpdate) {
 	SetButtonLamp(ButtonType(message.Button), message.Floor, message.Turn)
 }
 
@@ -124,12 +119,12 @@ func (ctr *Controller) SendElevatorStatus() {
 	ctr.Channels.CurrentFloor <- ctr.Elev.CurrentFloor
 }
 
-// pollDoorOpen sends update to listener if door opens or closes
+// Updates listener if door opens or closes
 func (ctr *Controller) pollDoorOpen(elev *ElevatorMachine) {
 	prev := elev.Available
 	ctr.Channels.DoorOpen <- prev
 	for {
-		time.Sleep(_ctrPollRate)
+		time.Sleep(_doorPollRate)
 		v := ctr.Elev.Available
 
 		if v != prev {
@@ -139,12 +134,12 @@ func (ctr *Controller) pollDoorOpen(elev *ElevatorMachine) {
 	}
 }
 
-// pollElevFloor sends update to listener if elevator enters new floor
+// Updates listener when elevator enters new floor
 func (ctr *Controller) pollElevFloor(elev *ElevatorMachine) {
 	prev := elev.CurrentFloor
 	ctr.Channels.CurrentFloor <- prev
 	for {
-		time.Sleep(_ctrPollRate)
+		time.Sleep(_floorPollRate)
 		v := GetFloor()
 		if v != prev && v != -1 {
 			SetFloorIndicator(v)
@@ -154,12 +149,12 @@ func (ctr *Controller) pollElevFloor(elev *ElevatorMachine) {
 	}
 }
 
-// pollDoorObstructed sends update to listener if elevator door is obstructed
+// Updates listener if elevator door is obstructed
 func (ctr *Controller) pollDoorObstructed(elev *ElevatorMachine) {
 	prev := GetObstruction()
 	ctr.Channels.DoorObstructed <- prev
 	for {
-		time.Sleep(_ctrPollRate)
+		time.Sleep(_obstrPollRate)
 		v := GetObstruction()
 		if v != prev {
 			ctr.Channels.DoorObstructed <- v
@@ -167,6 +162,7 @@ func (ctr *Controller) pollDoorObstructed(elev *ElevatorMachine) {
 		}
 	}
 }
+
 
 /*________________________Wrapper functions___________________________*
 *

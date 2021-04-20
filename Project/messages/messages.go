@@ -1,48 +1,48 @@
 package messages
 
 import (
-	"time"
+	// "time"
 
-	"../config"
+	// "../config"
 )
 
-type ButtonType_msg int
+type ButtonType int
 
 const (
-	UNDEFINED   ButtonType_msg = -1
-	BT_HallUp   ButtonType_msg = 0
-	BT_HallDown ButtonType_msg = 1
-	BT_Cab      ButtonType_msg = 2
+	UNDEFINED   ButtonType = -1
+	BT_HallUp   ButtonType = 0
+	BT_HallDown ButtonType = 1
+	BT_Cab      ButtonType = 2
 )
 
-type ButtonEvent_message struct {
+type ButtonEvent struct {
 	Floor  int
-	Button ButtonType_msg
+	Button ButtonType
 }
 
-type LampUpdate_message struct {
+type LampUpdate struct {
 	Floor  int
-	Button ButtonType_msg
+	Button ButtonType
 	Turn   bool
 }
 
-type HallOrder struct {
-	HasOrder   bool
-	Floor      int
-	Direction  ButtonType_msg //up = 0, down = 1
-	VersionNum int
-	Costs      [config.NumElevators]int
-	TimeStamp  time.Time
-}
+// type HallOrder struct {
+// 	HasOrder   bool
+// 	Floor      int
+// 	Direction  ButtonType //up = 0, down = 1
+// 	VersionNum int
+// 	Costs      [config.NumElevators]int
+// 	TimeStamp  time.Time
+// }
 
-type ElevatorStatus struct {
-	ID           int
-	Pos          int
-	OrderList    [config.NumFloors*2 - 2]HallOrder
-	IsOnline     bool
-	DoorOpen     bool
-	CabOrders    [config.NumFloors]bool
-	IsAvailable  bool
-	IsObstructed bool
-	Timestamp    time.Time
-}
+// type ElevatorStatus struct {
+// 	ID           int
+// 	Pos          int
+// 	OrderList    [config.NumFloors*2 - 2]HallOrder
+// 	IsOnline     bool
+// 	DoorOpen     bool
+// 	CabOrders    [config.NumFloors]bool
+// 	IsAvailable  bool
+// 	IsObstructed bool
+// 	Timestamp    time.Time
+// }

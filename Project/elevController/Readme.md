@@ -57,5 +57,3 @@ I hope some readers interested in cool pattern implementations found this sectio
 Source: https://venilnoronha.io/a-simple-state-machine-framework-in-go).
 
 ***
-
-*Author: Eldar Sandanger*

@@ -1,15 +1,16 @@
-package orders
+package orderDistribution
 
 import (
 	"time"
 )
-func initOrderList() [orderListLength]HallOrder {
-	OrderList := [orderListLength]HallOrder{}
+
+func initOrderList() [_orderListLength]HallOrder {
+	OrderList := [_orderListLength]HallOrder{}
 
 	// initalizing HallUp Orders
-	initialCosts := [numElevators]int{10000}
+	initialCosts := [_numElevators]int{10000}
 
-	for idx := 0; idx < orderListLength; idx ++{
+	for idx := 0; idx < _orderListLength; idx ++{
 		OrderList[idx] = HallOrder{
 			HasOrder:   false,
 			Floor:      orderListIdxToFloor(idx),
@@ -22,22 +23,22 @@ func initOrderList() [orderListLength]HallOrder {
 	return OrderList
 }
 
-func initAllElevatorStatuses() [numElevators]ElevatorStatus {
+func initAllElevatorStatuses() [_numElevators]ElevatorStatus {
 
-	CabOrders := [numFloors]bool{false}
+	CabOrders := [_numFloors]bool{false}
 	OrderList := initOrderList()
 
-	listOfElevators := [numElevators]ElevatorStatus{}
+	listOfElevators := [_numElevators]ElevatorStatus{}
 
-	for i := 0; i < (numElevators); i++ {
+	for i := 0; i < (_numElevators); i++ {
 		Status := ElevatorStatus{
 			ID:           i,
 			Pos:          1,
 			OrderList:    OrderList,
-			IsOnline:     false, //NB isOline is deafult false
+			IsOnline:     false, 
 			DoorOpen:     false,
 			CabOrders:    CabOrders,
-			IsAvailable:  false, //NB isAvaliable is deafult false
+			IsAvailable:  false, 
 			IsObstructed: false,
 		}
 		listOfElevators[i] = Status
@@ -45,15 +46,16 @@ func initAllElevatorStatuses() [numElevators]ElevatorStatus {
 	return listOfElevators
 }
 
-func initThisElevatorStatus(allElevatorSatuses *[numElevators]ElevatorStatus, chans OrderChannels){
-	
-	allElevatorSatuses[curID].IsOnline = true
-	allElevatorSatuses[curID].IsAvailable = true
 
-	chans.Get_init_position <- true
-	initFloor := <-chans.New_floor
-	initDoor := <-chans.Door_status
+func initThisElevatorStatus(allElevatorSatuses *[_numElevators]ElevatorStatus, chans OrderChannels){
+	 
+	allElevatorSatuses[_thisID].IsOnline = true
+	allElevatorSatuses[_thisID].IsAvailable = true
 
-	allElevatorSatuses[curID].Pos = initFloor
-	allElevatorSatuses[curID].DoorOpen = initDoor
+	chans.GetInitPosition <- true
+	initFloor := <-chans.NewFloor
+	initDoor := <-chans.DoorOpen
+
+	allElevatorSatuses[_thisID].Pos = initFloor
+	allElevatorSatuses[_thisID].DoorOpen = initDoor
 }

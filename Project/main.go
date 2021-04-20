@@ -7,10 +7,10 @@ import (
 	"fmt"
 
 	"./config"
-	"./elevator"
+	"./elevController"
 	"./messages"
 	"./network/bcast"
-	"./orders"
+	"./orderDistribution"
 )
 
 func main() {
@@ -20,18 +20,31 @@ func main() {
 
 	// Setup all the channels we need
 	getElevatorUpdate := make(chan bool)
-	doorOpen := make(chan bool, 5)
-	doorObstructed := make(chan bool,5)
-	currentFloor := make(chan int, 10)                          //new  floor
-	buttonAction := make(chan messages.ButtonEvent_message, 10) //pressed button
-	order := make(chan int, 2)                                 // goTo floor
-	controllerReady := make(chan bool)                      // Check when controller is done
-	elevatorStatusTx := make(chan messages.ElevatorStatus)
-	elevatorStatusRx := make(chan messages.ElevatorStatus)
-	lampNotifications := make(chan messages.LampUpdate_message, 5)
+	doorOpen := make(chan bool, 1)
+	doorObstructed := make(chan bool, 1)
+	currentFloor := make(chan int, 1)                          
+	buttonAction := make(chan messages.ButtonEvent, 1) 
+	order := make(chan int, 1)                                 
+	controllerReady := make(chan bool)                    
+	elevatorStatusTx := make(chan orderDistribution.ElevatorStatus)
+	elevatorStatusRx := make(chan orderDistribution.ElevatorStatus)
+	lampNotifications := make(chan messages.LampUpdate, 1)
+
+	/*
+	ElevatorUpdateRequest := make(chan bool)
+	DoorOpen := make(chan bool, 1)
+	DoorObstructed := make(chan bool,1)
+	CurrentFloor := make(chan int, 1)                         
+	ButtonAction := make(chan messages.ButtonEvent, 1) 
+	ExecutionOrder := make(chan int, 1)                           
+	ControllerReady := make(chan bool)                      
+	ElevatorStatusTx := make(chan orderDistribution.ElevatorStatus)
+	ElevatorStatusRx := make(chan orderDistribution.ElevatorStatus)
+	LampUpdates := make(chan messages.LampUpdate, 1)
+	*/
 
 	// Bundle controller channels in a struct
-	ctrChans := elevator.ControllerChannels{
+	ctrChans := elevController.ControllerChannels{
 		DoorOpen             : doorOpen,
 		CurrentFloor         : currentFloor,
 		RedirectButtonAction : buttonAction,
@@ -42,24 +55,24 @@ func main() {
 		ReceiveLampUpdate    : lampNotifications,
 	}
 
-	orderChans := orders.OrderChannels{
-		Button_press            : buttonAction,
-		Received_elevator_update: elevatorStatusRx,
-		New_floor               : currentFloor,
-		Door_status             : doorOpen,
-		Send_status             : elevatorStatusTx,
-		Go_to_floor             : order,
-		Get_init_position  	 	: getElevatorUpdate,
-		DoorObstructed          : doorObstructed,
-		UpdateLampMessage       : lampNotifications,
+	orderChans := orderDistribution.OrderChannels{
+		ButtonPress           : buttonAction,
+		ReceivedElevatorUpdate: elevatorStatusRx,
+		NewFloor              : currentFloor,
+		DoorOpen              : doorOpen,
+		SendStatus            : elevatorStatusTx,
+		GotoFloor             : order,
+		GetInitPosition       : getElevatorUpdate,
+		DoorObstructed        : doorObstructed,
+		UpdateLampMessage     : lampNotifications,
 	}
 
-	controller := elevator.NewController(ctrChans)
+	controller := elevController.NewController(ctrChans)
 	go controller.Run()
 	<-controllerReady
 
 	go bcast.Transmitter(config.BcastPort, elevatorStatusTx)
 	go bcast.Receiver(config.BcastPort, elevatorStatusRx)
 
-	orders.RunOrders(orderChans)
+	orderDistribution.RunOrders(orderChans)
 }
